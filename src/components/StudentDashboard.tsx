@@ -112,8 +112,10 @@ export function StudentDashboard({
         setLoadedVariant(variant);
         setVariantSource(
           source === 'gemini'
-            ? 'Gemini APIで新規生成 → 全生徒共有プールに保存済み'
-            : '共有類題プールから再利用（APIコストゼロ）'
+            ? 'AIで新規生成 → 全生徒共有データに保存済み'
+            : source === 'firestore-cache'
+            ? 'クラウド共有データから再利用（追加コストゼロ）'
+            : '共有類題プールから再利用（追加コストゼロ）'
         );
         onVariantPoolChanged?.();
       })

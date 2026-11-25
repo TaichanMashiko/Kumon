@@ -13,10 +13,10 @@ import { isFirebaseConfigured } from '../lib/firebase';
 import type { UserAccount } from '../types/curriculum';
 
 interface LoginViewProps {
-  onLogin: (user: UserAccount) => void;
+  onDemoLogin: (user: UserAccount) => void;
 }
 
-export function LoginView({ onLogin }: LoginViewProps) {
+export function LoginView({ onDemoLogin }: LoginViewProps) {
   const students = DEMO_ACCOUNTS.filter((a) => a.role === 'student');
   const teachers = DEMO_ACCOUNTS.filter((a) => a.role === 'teacher');
   const [signingIn, setSigningIn] = useState(false);
@@ -26,15 +26,14 @@ export function LoginView({ onLogin }: LoginViewProps) {
     setSigningIn(true);
     setAuthError(null);
     try {
-      const account = await signInWithGoogleFirebase();
-      onLogin(account);
+      await signInWithGoogleFirebase();
+      // 認証後の画面遷移（初回登録 or ダッシュボード）は App 側のリスナーが自動処理します
     } catch (err) {
       setAuthError(
         err instanceof Error
           ? err.message
-          : 'Googleログインに失敗しました。Firebase Console の承認済みドメイン設定を確認してください。'
+          : 'Googleログインに失敗しました。接続設定を確認してください。'
       );
-    } finally {
       setSigningIn(false);
     }
   };
@@ -49,10 +48,10 @@ export function LoginView({ onLogin }: LoginViewProps) {
             </div>
             <div>
               <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
-                MathStep — 公文式デジタル数学学習システム
+                マスステップ — 公文式デジタル数学学習システム
               </h1>
               <p className="text-sm text-slate-500">
-                Google Workspace for Education アカウントでログイン
+                学校のGoogleアカウントでログインしてください
               </p>
             </div>
           </div>
@@ -65,7 +64,7 @@ export function LoginView({ onLogin }: LoginViewProps) {
             }`}
           >
             <Cloud className="h-3.5 w-3.5" />
-            {isFirebaseConfigured ? 'Firebase 接続済み' : 'デモモード'}
+            {isFirebaseConfigured ? 'クラウド同期中' : 'デモモード'}
           </span>
         </div>
 
@@ -84,22 +83,22 @@ export function LoginView({ onLogin }: LoginViewProps) {
             <div>
               <div className="font-bold">教員承認＆自習開放</div>
               <div className="text-blue-800/80">
-                冬休み等はアカウントごとに自己採点（自習モード）を開放可能。
+                冬休み等はアカウントごとに自己採点（自習モード）を開放できます。
               </div>
             </div>
           </div>
           <div className="flex items-start gap-2">
             <GraduationCap className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
             <div>
-              <div className="font-bold">Firebase同期＆AI先生</div>
+              <div className="font-bold">データ同期＆AI先生</div>
               <div className="text-blue-800/80">
-                Firestoreで進度と類題を全生徒共有。質問はGeminiがサポート。
+                進度と類題を全生徒で共有。わからない箇所はAI先生がヒントを出します。
               </div>
             </div>
           </div>
         </div>
 
-        {/* Firebase Google Sign-In Section */}
+        {/* Google Sign-In Section */}
         {isFirebaseConfigured && (
           <div className="mt-6 rounded-xl border-2 border-blue-200 bg-blue-50/40 p-5 text-center">
             <button
@@ -113,10 +112,10 @@ export function LoginView({ onLogin }: LoginViewProps) {
               ) : (
                 <LogIn className="h-4 w-4" />
               )}
-              Googleアカウントでログイン（Firebase Auth）
+              Googleアカウントでログイン
             </button>
             <p className="mt-2 text-xs text-slate-600">
-              教員メールアドレス（<code className="font-mono">tmashiko@kiryo.ac.jp</code> 等）は自動的に教員管理画面へ遷移します。
+              初回ログイン時に「生徒」か「教員」かを選択して登録できます。
             </p>
             {authError && (
               <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-left text-xs text-rose-800">
@@ -126,25 +125,24 @@ export function LoginView({ onLogin }: LoginViewProps) {
           </div>
         )}
 
-        {/* Demo Accounts (Fallback when Firebase env vars are not configured yet) */}
+        {/* Demo Accounts Fallback */}
         {!isFirebaseConfigured && (
           <div className="mt-6 space-y-5">
             <div className="rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3 text-xs text-amber-900">
-              <strong>Firebase 未設定（デモモード）:</strong> Vercel の Environment Variables に{' '}
-              <code className="font-mono">VITE_FIREBASE_*</code> を設定すると、Google認証＋Cloud Firestore 永続保存に自動切替されます。
+              <strong>デモ保存モードで動作中:</strong> クラウド同期の設定を行うと、学校のGoogleアカウントでのログインとリアルタイムデータ保存に切り替わります。
             </div>
 
             <div>
-              <h2 className="mb-2.5 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+              <h2 className="mb-2.5 flex items-center gap-2 text-xs font-bold tracking-wider text-slate-500">
                 <GraduationCap className="h-4 w-4 text-blue-600" />
-                生徒アカウントでデモ体験
+                生徒アカウントで体験する
               </h2>
               <div className="grid gap-2.5 sm:grid-cols-3">
                 {students.map((account) => (
                   <button
                     key={account.id}
                     type="button"
-                    onClick={() => onLogin(account)}
+                    onClick={() => onDemoLogin(account)}
                     className="flex flex-col items-start rounded-xl border border-slate-200 bg-white p-3.5 text-left transition hover:border-blue-400 hover:bg-blue-50/40 hover:shadow-sm"
                   >
                     <div className="flex w-full items-center justify-between">
@@ -168,16 +166,16 @@ export function LoginView({ onLogin }: LoginViewProps) {
             </div>
 
             <div>
-              <h2 className="mb-2.5 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+              <h2 className="mb-2.5 flex items-center gap-2 text-xs font-bold tracking-wider text-slate-500">
                 <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                教員アカウントでデモ体験（管理・自習モード開放）
+                教員アカウントで体験する（進度承認・自習モード開放）
               </h2>
               <div className="grid gap-2.5">
                 {teachers.map((account) => (
                   <button
                     key={account.id}
                     type="button"
-                    onClick={() => onLogin(account)}
+                    onClick={() => onDemoLogin(account)}
                     className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50/30 p-3.5 text-left transition hover:border-emerald-400 hover:bg-emerald-50"
                   >
                     <div className="flex items-center gap-3">

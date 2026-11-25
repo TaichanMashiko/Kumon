@@ -33,6 +33,15 @@ export function createDefaultStudentProgress(studentId: string): StudentProgress
   };
 }
 
+export async function fetchUserProfileFromFirestore(
+  uid: string
+): Promise<UserAccount | null> {
+  if (!isFirebaseConfigured || !db) return null;
+  const snap = await getDoc(doc(db, 'users', uid));
+  if (!snap.exists()) return null;
+  return snap.data() as UserAccount;
+}
+
 export async function ensureUserInFirestore(user: UserAccount): Promise<void> {
   if (!isFirebaseConfigured || !db) return;
 

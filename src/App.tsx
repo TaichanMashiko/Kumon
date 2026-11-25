@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { LoginView } from './components/LoginView';
 import { Navbar } from './components/Navbar';
+import { RoleSetupView } from './components/RoleSetupView';
 import { StudentDashboard } from './components/StudentDashboard';
 import { TeacherDashboard } from './components/TeacherDashboard';
 import {
@@ -10,12 +11,14 @@ import {
   saveUserSession,
   signOutFirebase,
   subscribeFirebaseAuth,
+  type FirebaseIdentity,
 } from './lib/auth';
 import { loadAllSteps } from './lib/contentLoader';
 import { isFirebaseConfigured } from './lib/firebase';
 import {
   createDefaultStudentProgress,
   ensureUserInFirestore,
+  fetchUserProfileFromFirestore,
   saveStudentProgressToFirestore,
   subscribeSharedVariantsFromFirestore,
   subscribeSingleStudentProgress,
@@ -37,12 +40,18 @@ import {
   PRESET_VARIANTS,
   saveSharedVariantPool,
 } from './lib/variantStore';
-import type { StudentProgress, UserAccount, VariantProblemSet } from './types/curriculum';
+import type {
+  StudentProgress,
+  UserAccount,
+  UserRole,
+  VariantProblemSet,
+} from './types/curriculum';
 
 export default function App() {
   const [user, setUser] = useState<UserAccount | null>(() =>
     isFirebaseConfigured ? null : getSavedUser()
   );
+  const [pendingIdentity, setPendingIdentity] = useState<FirebaseIdentity | null>(null);
   const [authReady, setAuthReady] = useState<boolean>(!isFirebaseConfigured);
   const [students, setStudents] = useState<UserAccount[]>(() =>
     isFirebaseConfigured ? [] : getStudentAccounts()
@@ -55,15 +64,35 @@ export default function App() {
   );
   const stepsById = useMemo(() => loadAllSteps(), []);
 
-  // Subscribe to Firebase Auth state
+  // Subscribe to Firebase Auth state and check whether user has registered role
   useEffect(() => {
     if (!isFirebaseConfigured) return;
-    const unsub = subscribeFirebaseAuth((account) => {
-      setUser(account);
-      setAuthReady(true);
-      if (account) {
-        void ensureUserInFirestore(account);
+    const unsub = subscribeFirebaseAuth((identity) => {
+      if (!identity) {
+        setUser(null);
+        setPendingIdentity(null);
+        setAuthReady(true);
+        return;
       }
+
+      fetchUserProfileFromFirestore(identity.uid)
+        .then((profile) => {
+          if (profile) {
+            setUser(profile);
+            setPendingIdentity(null);
+          } else {
+            // 初回ログイン時は教員/生徒の登録画面へ
+            setUser(null);
+            setPendingIdentity(identity);
+          }
+        })
+        .catch(() => {
+          setUser(null);
+          setPendingIdentity(identity);
+        })
+        .finally(() => {
+          setAuthReady(true);
+        });
     });
     return unsub;
   }, []);
@@ -111,11 +140,30 @@ export default function App() {
     }
   };
 
-  const handleLogin = (account: UserAccount) => {
+  const handleDemoLogin = (account: UserAccount) => {
     if (!isFirebaseConfigured) {
       saveUserSession(account);
     }
     setUser(account);
+  };
+
+  const handleCompleteRoleSetup = async (
+    role: UserRole,
+    displayName: string,
+    classLabel: string
+  ) => {
+    if (!pendingIdentity) return;
+    const newAccount: UserAccount = {
+      id: pendingIdentity.uid,
+      name: displayName,
+      email: pendingIdentity.email,
+      role,
+      classLabel,
+      initials: displayName.slice(0, 1).toUpperCase(),
+    };
+    await ensureUserInFirestore(newAccount);
+    setPendingIdentity(null);
+    setUser(newAccount);
   };
 
   const handleLogout = () => {
@@ -124,19 +172,31 @@ export default function App() {
     } else {
       clearUserSession();
     }
+    setPendingIdentity(null);
     setUser(null);
   };
 
   if (!authReady) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm font-semibold text-slate-600">
-        Firebase 認証状態を確認中...
+        ログイン状態を確認しています...
       </div>
     );
   }
 
+  if (pendingIdentity && !user) {
+    return (
+      <RoleSetupView
+        name={pendingIdentity.name}
+        email={pendingIdentity.email}
+        onComplete={handleCompleteRoleSetup}
+        onCancel={handleLogout}
+      />
+    );
+  }
+
   if (!user) {
-    return <LoginView onLogin={handleLogin} />;
+    return <LoginView onDemoLogin={handleDemoLogin} />;
   }
 
   const currentStudentProgress =

@@ -6,9 +6,9 @@ service cloud.firestore {
     }
 
     function isTeacher() {
-      return isSignedIn() && request.auth.token.email in [
-        'tmashiko@kiryo.ac.jp'
-      ];
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
     }
 
     match /users/{userId} {

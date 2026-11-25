@@ -5,12 +5,13 @@ import {
   type User as FirebaseUser,
 } from 'firebase/auth';
 import type { UserAccount } from '../types/curriculum';
-import {
-  auth,
-  googleProvider,
-  isFirebaseConfigured,
-  isTeacherEmail,
-} from './firebase';
+import { auth, googleProvider, isFirebaseConfigured } from './firebase';
+
+export interface FirebaseIdentity {
+  uid: string;
+  name: string;
+  email: string;
+}
 
 export const DEMO_ACCOUNTS: UserAccount[] = [
   {
@@ -49,26 +50,22 @@ export const DEMO_ACCOUNTS: UserAccount[] = [
 
 const AUTH_STORAGE_KEY = 'mathstep_auth_user_id_v1';
 
-export function mapFirebaseUserToAccount(fbUser: FirebaseUser): UserAccount {
+function toIdentity(fbUser: FirebaseUser): FirebaseIdentity {
   const email = fbUser.email ?? '';
-  const teacher = isTeacherEmail(email);
   const name = fbUser.displayName || email.split('@')[0] || 'ユーザー';
   return {
-    id: fbUser.uid,
+    uid: fbUser.uid,
     name,
     email,
-    role: teacher ? 'teacher' : 'student',
-    classLabel: teacher ? '教員アカウント' : '生徒アカウント',
-    initials: name.slice(0, 1).toUpperCase(),
   };
 }
 
-export async function signInWithGoogleFirebase(): Promise<UserAccount> {
+export async function signInWithGoogleFirebase(): Promise<FirebaseIdentity> {
   if (!isFirebaseConfigured || !auth || !googleProvider) {
-    throw new Error('Firebase が設定されていません。');
+    throw new Error('クラウド認証が設定されていません。');
   }
   const cred = await signInWithPopup(auth, googleProvider);
-  return mapFirebaseUserToAccount(cred.user);
+  return toIdentity(cred.user);
 }
 
 export async function signOutFirebase(): Promise<void> {
@@ -79,13 +76,13 @@ export async function signOutFirebase(): Promise<void> {
 }
 
 export function subscribeFirebaseAuth(
-  cb: (user: UserAccount | null) => void
+  cb: (identity: FirebaseIdentity | null) => void
 ): () => void {
   if (!isFirebaseConfigured || !auth) {
     return () => {};
   }
   return onAuthStateChanged(auth, (fbUser) => {
-    cb(fbUser ? mapFirebaseUserToAccount(fbUser) : null);
+    cb(fbUser ? toIdentity(fbUser) : null);
   });
 }
 

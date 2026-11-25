@@ -71,11 +71,14 @@ export default async function handler(req, res) {
   }
 
   // 2. Generate new variant set using Gemini API
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey =
+    process.env.GEMINI_API_KEY ||
+    process.env.GOOGLE_API_KEY ||
+    process.env.API_KEY;
   if (!apiKey) {
     return res.status(503).json({
       error:
-        '新規の類題を生成するには Vercel の環境変数に GEMINI_API_KEY を設定してください。',
+        '新規の類題を生成するには、Vercelの環境変数に GEMINI_API_KEY を設定してください。',
     });
   }
 

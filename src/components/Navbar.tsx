@@ -20,7 +20,7 @@ export function Navbar({ user, onLogout }: NavbarProps) {
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-base font-bold tracking-tight text-slate-900">
-                MathStep
+                マスステップ
               </span>
               <span
                 className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
@@ -30,7 +30,7 @@ export function Navbar({ user, onLogout }: NavbarProps) {
                 }`}
               >
                 <Cloud className="h-3 w-3" />
-                {isFirebaseConfigured ? 'Firebase同期中' : 'デモ保存モード'}
+                {isFirebaseConfigured ? 'クラウド同期中' : 'デモ保存モード'}
               </span>
             </div>
             <p className="text-xs text-slate-500">

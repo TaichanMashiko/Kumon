@@ -91,7 +91,7 @@ export function AiTutorPanel({ step, onLogConfusionNote }: AiTutorPanelProps) {
               AI先生に質問する
               <span className="inline-flex items-center gap-0.5 rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700">
                 <Sparkles className="h-2.5 w-2.5" />
-                Gemini API
+                AIチューター
               </span>
             </h3>
             <p className="text-[11px] text-slate-500">
