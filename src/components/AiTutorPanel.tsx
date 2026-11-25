@@ -85,7 +85,7 @@ export function AiTutorPanel({ step, onLogConfusionNote }: AiTutorPanelProps) {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="fixed right-6 bottom-6 z-40 inline-flex items-center gap-2 rounded-full bg-neutral-900 px-5 py-3 text-xs font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] transition hover:bg-neutral-800 active:scale-[0.98]"
+          className="fixed right-6 bottom-6 z-40 inline-flex items-center gap-2 rounded-full bg-teal-700 px-5 py-3 text-xs font-bold text-white shadow-[0_8px_24px_rgba(15,118,110,0.28)] transition hover:bg-teal-800 active:scale-[0.98]"
         >
           <MessageCircle className="h-4 w-4" />
           <span>AIに質問する</span>

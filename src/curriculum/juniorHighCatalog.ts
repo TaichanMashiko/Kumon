@@ -233,7 +233,8 @@ export function buildJuniorHighCatalog(): MicroStepSpec[] {
       baseTitle: '展開公式 (x+a)(x+b)',
       subLabels: SETS_6,
       questionCount: 15,
-      explanation: '$(x+a)(x+b) = x^2 + (a+b)x + ab$ の公式を使って暗算レベルまで習熟します。',
+      explanation:
+        '公式 $(x+a)(x+b) = x^2 + (a+b)x + ab$ を使います。$x$ の係数は「たし算」、定数項は「かけ算」です。\n\n**例**：$(x+2)(x-5) = x^2 + (2-5)x + 2\\times(-5) = x^2 - 3x - 10$',
       template: 'expand_poly',
       paramsFn: () => ({ kind: 'x_ab' }),
     }),

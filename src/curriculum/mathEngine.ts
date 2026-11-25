@@ -827,10 +827,16 @@ function generateSingleProblem(
   }
 }
 
-export function renderStepMarkdown(
+export interface GeneratedWorksheet {
+  explanation: string;
+  problems: GeneratedProblem[];
+  questionCount: number;
+}
+
+export function generateWorksheetData(
   spec: MicroStepSpec,
   variantNumber = 0
-): string {
+): GeneratedWorksheet {
   const rng = createRng(`${spec.id}::v${variantNumber}`);
   const problems: GeneratedProblem[] = [];
   const seen = new Set<string>();
@@ -844,6 +850,19 @@ export function renderStepMarkdown(
     problems.push(prob);
   }
 
+  return {
+    explanation: spec.explanation,
+    problems,
+    questionCount: spec.questionCount,
+  };
+}
+
+export function renderStepMarkdown(
+  spec: MicroStepSpec,
+  variantNumber = 0
+): string {
+  const { problems } = generateWorksheetData(spec, variantNumber);
+
   const problemLines = problems
     .map((item, idx) => `${idx + 1}. ${item.prompt}`)
     .join('\n');
@@ -853,16 +872,16 @@ export function renderStepMarkdown(
 
   const heading =
     variantNumber > 0
-      ? `# ✍️ 類題トレーニング #${variantNumber}（全${spec.questionCount}問）`
-      : `# ✍️ 練習問題（全${spec.questionCount}問）`;
+      ? `# 類題トレーニング #${variantNumber}（全${spec.questionCount}問）`
+      : `# 練習問題（全${spec.questionCount}問）`;
 
   const intro =
     variantNumber > 0
-      ? `同じレベルの類題です。90%以上を目指してノートに鉛筆で解きましょう。`
+      ? `同じレベルの類題です。90%以上を目指してノートに解きましょう。`
       : `手元のノートに鉛筆で解きましょう。`;
 
   const explanationPart =
-    variantNumber > 0 ? '' : `# 📖 解説\n\n${spec.explanation}\n\n`;
+    variantNumber > 0 ? '' : `# 解説\n\n${spec.explanation}\n\n`;
 
   return `${explanationPart}${heading}
 
@@ -872,7 +891,7 @@ ${problemLines}
 
 ---
 
-# 💡 解答（自己採点用）
+# 解答（自己採点用）
 
 <details>
 <summary>解き終わったらここを押して答え合わせ</summary>

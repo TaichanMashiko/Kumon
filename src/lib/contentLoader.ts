@@ -4,11 +4,16 @@ import {
   MICRO_STEPS_BY_STAGE,
   STAGE_GROUPS,
 } from '../curriculum';
-import { renderStepMarkdown, type StageGroup } from '../curriculum/mathEngine';
+import {
+  generateWorksheetData,
+  renderStepMarkdown,
+  type GeneratedWorksheet,
+  type StageGroup,
+} from '../curriculum/mathEngine';
 import type { StepDocument } from '../types/curriculum';
 
 export { ALL_MICRO_STEPS, MICRO_STEPS_BY_ID, MICRO_STEPS_BY_STAGE, STAGE_GROUPS };
-export type { StageGroup };
+export type { GeneratedWorksheet, StageGroup };
 
 const LEGACY_STEP_REDIRECT: Record<string, string> = {
   'E-CALC-001': 'E5-FADD-001',
@@ -27,6 +32,15 @@ export function resolveStepId(stepId: string): string {
     return LEGACY_STEP_REDIRECT[stepId];
   }
   return ALL_MICRO_STEPS[0].id;
+}
+
+export function getWorksheetData(
+  stepId: string,
+  variantNumber = 0
+): GeneratedWorksheet {
+  const resolvedId = resolveStepId(stepId);
+  const spec = MICRO_STEPS_BY_ID[resolvedId] ?? ALL_MICRO_STEPS[0];
+  return generateWorksheetData(spec, variantNumber);
 }
 
 export function getStepDocument(stepId: string, variantNumber = 0): StepDocument {

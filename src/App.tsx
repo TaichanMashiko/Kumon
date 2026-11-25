@@ -204,7 +204,7 @@ export default function App() {
       : '教員管理';
 
   return (
-    <div className="min-h-screen bg-[#F7F8FA]">
+    <div className="min-h-screen bg-[#F4F6F4]">
       <Navbar user={user} stepSubtitle={currentStepTitle} onLogout={handleLogout} />
 
       {user.role === 'student' && currentStudentProgress ? (
