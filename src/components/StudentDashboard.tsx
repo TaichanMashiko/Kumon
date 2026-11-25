@@ -1,9 +1,12 @@
-import { useEffect, useState } from 'react';
-import { ArrowRight, Check, Loader2, PenLine } from 'lucide-react';
-import { getOrderedStepIds } from '../lib/contentLoader';
+import { useEffect, useMemo, useState } from 'react';
+import { ArrowRight, Check, Loader2, Minus, PenLine, Plus } from 'lucide-react';
+import {
+  ALL_MICRO_STEPS,
+  getStepDocument,
+  resolveStepId,
+} from '../lib/contentLoader';
 import { getOrGenerateVariantSet } from '../lib/variantStore';
 import type {
-  StepDocument,
   StudentProgress,
   UserAccount,
   VariantProblemSet,
@@ -13,7 +16,6 @@ import { MarkdownMath } from './MarkdownMath';
 
 interface StudentDashboardProps {
   user: UserAccount;
-  stepsById: Record<string, StepDocument>;
   progress: StudentProgress;
   onRateClarity: (stepId: string, score: 1 | 2 | 3 | 4 | 5) => void;
   onAddConfusionNote: (stepId: string, note: string) => void;
@@ -34,7 +36,6 @@ function extractExplanationOnly(markdown: string): string {
 }
 
 export function StudentDashboard({
-  stepsById,
   progress,
   onRateClarity,
   onAddConfusionNote,
@@ -42,12 +43,15 @@ export function StudentDashboard({
   onSelectVariantNumber,
   onVariantPoolChanged,
 }: StudentDashboardProps) {
-  const orderedIds = getOrderedStepIds();
-  const activeStep = stepsById[progress.currentStepId] ?? Object.values(stepsById)[0];
-  const activeStepId = activeStep?.frontmatter.id ?? '';
-  const stepIndex = Math.max(0, orderedIds.indexOf(activeStepId));
-  const totalSteps = orderedIds.length;
-  const questionCount = activeStep?.frontmatter.question_count ?? 4;
+  const resolvedStepId = resolveStepId(progress.currentStepId);
+  const activeStep = useMemo(() => getStepDocument(resolvedStepId, 0), [resolvedStepId]);
+  const activeStepId = activeStep.frontmatter.id;
+  const stepIndex = Math.max(
+    0,
+    ALL_MICRO_STEPS.findIndex((s) => s.id === activeStepId)
+  );
+  const totalSteps = ALL_MICRO_STEPS.length;
+  const questionCount = activeStep.frontmatter.question_count ?? 15;
   const passThreshold = progress.passThresholdPercent ?? 90;
 
   const [correctCount, setCorrectCount] = useState<number>(questionCount);
@@ -75,7 +79,7 @@ export function StudentDashboard({
 
   useEffect(() => {
     let cancelled = false;
-    if (!activeStep || activeVariantNum <= 0) {
+    if (activeVariantNum <= 0) {
       setLoadedVariant(null);
       setVariantError(null);
       return;
@@ -112,7 +116,6 @@ export function StudentDashboard({
   };
 
   const handleSelfGrade = () => {
-    if (!activeStep) return;
     const accuracy = Math.round((correctCount / questionCount) * 100);
     const result = onSelfGradeSubmit(
       activeStepId,
@@ -129,20 +132,12 @@ export function StudentDashboard({
 
   const handleNoteSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeStep || !noteInput.trim()) return;
+    if (!noteInput.trim()) return;
     onAddConfusionNote(activeStepId, noteInput);
     setNoteInput('');
     setShowNoteForm(false);
     showToast('メモを記録しました');
   };
-
-  if (!activeStep) {
-    return (
-      <div className="mx-auto max-w-3xl px-4 py-16 text-center text-sm text-neutral-500">
-        表示する教材がありません。
-      </div>
-    );
-  }
 
   const displayMarkdown =
     activeVariantNum > 0 && loadedVariant
@@ -150,15 +145,18 @@ export function StudentDashboard({
       : activeStep.body;
 
   const progressRatio = totalSteps > 0 ? Math.round(((stepIndex + 1) / totalSteps) * 100) : 0;
+  const currentAccuracy = Math.round((correctCount / questionCount) * 100);
 
   return (
     <div className="mx-auto max-w-3xl px-4 pt-6 pb-24 sm:px-6">
       {/* Subtle Step Progress Header */}
       <div className="mb-5 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2.5 text-xs text-neutral-500">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-500">
           <span className="font-semibold text-neutral-900">
-            ステップ {stepIndex + 1} / {totalSteps}
+            レベル {stepIndex + 1} / {totalSteps}
           </span>
+          <span className="text-neutral-300">・</span>
+          <span>{activeStep.frontmatter.stage}</span>
           <span className="text-neutral-300">・</span>
           <span>{activeStep.frontmatter.category}</span>
           {activeVariantNum > 0 && (
@@ -171,7 +169,7 @@ export function StudentDashboard({
           )}
         </div>
 
-        <div className="hidden h-1.5 w-28 overflow-hidden rounded-full bg-neutral-200 sm:block">
+        <div className="hidden h-1.5 w-28 shrink-0 overflow-hidden rounded-full bg-neutral-200 sm:block">
           <div
             className="h-full rounded-full bg-neutral-900 transition-all duration-300"
             style={{ width: `${progressRatio}%` }}
@@ -183,7 +181,7 @@ export function StudentDashboard({
       <article className="rounded-2xl border border-neutral-200/90 bg-white px-6 py-8 shadow-[0_1px_2px_rgba(0,0,0,0.03)] sm:px-11 sm:py-10">
         <header className="mb-8 border-b border-neutral-100 pb-6">
           <p className="text-xs font-medium text-neutral-400">
-            {activeStep.frontmatter.stage}
+            {activeStep.frontmatter.stage} ／ {activeStep.frontmatter.category}
           </p>
           <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-neutral-900">
             {activeStep.frontmatter.title}
@@ -216,32 +214,63 @@ export function StudentDashboard({
             <div className="space-y-4">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <span className="text-xs font-semibold text-neutral-900">
-                  自己採点（正答率 {passThreshold}% 以上で次へ進みます）
+                  自己採点（正答率 {passThreshold}% 以上で次のレベルへ）
                 </span>
-                <span className="text-xs font-medium text-neutral-500">
-                  {correctCount} / {questionCount} 問正解（
-                  {Math.round((correctCount / questionCount) * 100)}%）
+                <span className="text-sm font-bold text-neutral-900">
+                  {correctCount} / {questionCount} 問正解（{currentAccuracy}%）
                 </span>
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                {Array.from({ length: questionCount + 1 }, (_, i) => i).map((num) => {
-                  const selected = correctCount === num;
-                  return (
-                    <button
-                      key={num}
-                      type="button"
-                      onClick={() => setCorrectCount(num)}
-                      className={`rounded-lg border px-3.5 py-2 text-xs font-semibold transition ${
-                        selected
-                          ? 'border-neutral-900 bg-neutral-900 text-white'
-                          : 'border-neutral-200 bg-white text-neutral-700 hover:border-neutral-400'
-                      }`}
-                    >
-                      {num}問
-                    </button>
-                  );
-                })}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex items-center rounded-xl border border-neutral-200 bg-neutral-50 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setCorrectCount((c) => Math.max(0, c - 1))}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-700 hover:bg-white"
+                    aria-label="1問減らす"
+                  >
+                    <Minus className="h-3.5 w-3.5" />
+                  </button>
+                  <input
+                    type="number"
+                    min={0}
+                    max={questionCount}
+                    value={correctCount}
+                    onChange={(e) =>
+                      setCorrectCount(
+                        Math.min(questionCount, Math.max(0, Number(e.target.value)))
+                      )
+                    }
+                    className="w-14 bg-transparent text-center text-sm font-bold text-neutral-900 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setCorrectCount((c) => Math.min(questionCount, c + 1))}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-700 hover:bg-white"
+                    aria-label="1問増やす"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+
+                {[
+                  { label: '全問正解', val: questionCount },
+                  { label: '1問ミス', val: Math.max(0, questionCount - 1) },
+                  { label: '2問ミス', val: Math.max(0, questionCount - 2) },
+                ].map((preset) => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => setCorrectCount(preset.val)}
+                    className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+                      correctCount === preset.val
+                        ? 'border-neutral-900 bg-neutral-900 text-white'
+                        : 'border-neutral-200 bg-white text-neutral-600 hover:border-neutral-400'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
               </div>
 
               <div className="flex flex-wrap items-center gap-3 pt-1">
@@ -256,14 +285,14 @@ export function StudentDashboard({
 
                 {lastResult && !lastResult.passed && (
                   <p className="text-xs text-amber-700">
-                    正答率 {lastResult.accuracy}%（基準 {passThreshold}%）— 類題に切り替わりました。もう一度挑戦しましょう。
+                    正答率 {lastResult.accuracy}%（基準 {passThreshold}%）— 同問題数の類題に切り替わりました。
                   </p>
                 )}
 
                 {lastResult && lastResult.passed && !lastResult.hasNext && (
                   <p className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700">
                     <ArrowRight className="h-3.5 w-3.5" />
-                    全ステップを完了しました。
+                    全レベルを完了しました。
                   </p>
                 )}
               </div>

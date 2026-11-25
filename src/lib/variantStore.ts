@@ -1,3 +1,5 @@
+import { MICRO_STEPS_BY_ID } from '../curriculum';
+import { renderStepMarkdown } from '../curriculum/mathEngine';
 import type { StepDocument, VariantProblemSet } from '../types/curriculum';
 import { isFirebaseConfigured } from './firebase';
 import {
@@ -5,83 +7,17 @@ import {
   saveSharedVariantToFirestore,
 } from './firestoreSync';
 
-const VARIANT_POOL_KEY = 'mathstep_shared_variant_pool_v1';
+const VARIANT_POOL_KEY = 'mathstep_shared_variant_pool_v2';
 
-export const PRESET_VARIANTS: VariantProblemSet[] = [
-  {
-    id: 'E-CALC-001-v1',
-    stepId: 'E-CALC-001',
-    variantNumber: 1,
-    questionCount: 5,
-    createdAt: '2026-11-25T00:00:00+09:00',
-    createdBy: 'preset',
-    markdown: `# ✍️ 類題トレーニング #1（全5問）
-
-同じレベルの類題です。90%以上（5問中5問）を目指してノートに解きましょう！
-
-1. $\\displaystyle \\frac{1}{3} + \\frac{1}{6}$
-2. $\\displaystyle \\frac{1}{2} + \\frac{1}{5}$
-3. $\\displaystyle \\frac{3}{4} - \\frac{1}{8}$
-4. $\\displaystyle \\frac{4}{5} - \\frac{1}{2}$
-5. $\\displaystyle \\frac{2}{3} + \\frac{3}{4}$
-
----
-
-# 💡 解答（自己採点用）
-
-<details>
-<summary>解き終わったらここを押して答え合わせ</summary>
-
-1. $\\displaystyle \\frac{2}{6} + \\frac{1}{6} = \\frac{3}{6} = \\frac{1}{2}$
-2. $\\displaystyle \\frac{5}{10} + \\frac{2}{10} = \\frac{7}{10}$
-3. $\\displaystyle \\frac{6}{8} - \\frac{1}{8} = \\frac{5}{8}$
-4. $\\displaystyle \\frac{8}{10} - \\frac{5}{10} = \\frac{3}{10}$
-5. $\\displaystyle \\frac{8}{12} + \\frac{9}{12} = \\frac{17}{12}$
-
-</details>`,
-  },
-  {
-    id: 'M3-INT-012-v1',
-    stepId: 'M3-INT-012',
-    variantNumber: 1,
-    questionCount: 4,
-    createdAt: '2026-11-25T00:00:00+09:00',
-    createdBy: 'preset',
-    markdown: `# ✍️ 類題トレーニング #1（全4問）
-
-同じレベルの類題です。90%以上（4問中4問）を目指してノートに解きましょう！（$C$ は積分定数）
-
-1. $\\displaystyle \\int 2x(x^2 + 3)^4 \\, dx$
-2. $\\displaystyle \\int 3x^2(x^3 + 1)^5 \\, dx$
-3. $\\displaystyle \\int \\frac{2x}{x^2 + 5} \\, dx$
-4. $\\displaystyle \\int \\cos^2 x \\sin x \\, dx$
-
----
-
-# 💡 解答（自己採点用）
-
-<details>
-<summary>解き終わったらここを押して答え合わせ</summary>
-
-1. $t = x^2 + 3$ と置くと $dt = 2x\\,dx$ より、$\\displaystyle \\frac{1}{5}(x^2 + 3)^5 + C$
-2. $t = x^3 + 1$ と置くと $dt = 3x^2\\,dx$ より、$\\displaystyle \\frac{1}{6}(x^3 + 1)^6 + C$
-3. $t = x^2 + 5$ と置くと $dt = 2x\\,dx$ より、$\\log(x^2 + 5) + C$
-4. $t = \\cos x$ と置くと $dt = -\\sin x\\,dx$ より、$\\displaystyle -\\frac{1}{3}\\cos^3 x + C$
-
-</details>`,
-  },
-];
+export const PRESET_VARIANTS: VariantProblemSet[] = [];
 
 export function loadSharedVariantPool(): VariantProblemSet[] {
   try {
     const raw = localStorage.getItem(VARIANT_POOL_KEY);
-    if (!raw) {
-      localStorage.setItem(VARIANT_POOL_KEY, JSON.stringify(PRESET_VARIANTS));
-      return [...PRESET_VARIANTS];
-    }
+    if (!raw) return [];
     return JSON.parse(raw) as VariantProblemSet[];
   } catch {
-    return [...PRESET_VARIANTS];
+    return [];
   }
 }
 
@@ -112,12 +48,12 @@ export async function getOrGenerateVariantSet(
   variantNumber: number
 ): Promise<{
   variant: VariantProblemSet;
-  source: 'firestore-cache' | 'local-cache' | 'server-cache' | 'gemini';
+  source: 'firestore-cache' | 'local-cache' | 'generator' | 'gemini';
 }> {
   const stepId = step.frontmatter.id;
-  const questionCount = step.frontmatter.question_count ?? 4;
+  const questionCount = step.frontmatter.question_count ?? 15;
 
-  // 1. Check Firestore shared pool first (shared across all students & devices!)
+  // 1. Check Firestore shared pool first (shared across all students & devices)
   if (isFirebaseConfigured) {
     const remoteHit = await fetchSharedVariantFromFirestore(stepId, variantNumber);
     if (remoteHit) {
@@ -126,7 +62,7 @@ export async function getOrGenerateVariantSet(
     }
   }
 
-  // 2. Check local / preset cache (zero API cost)
+  // 2. Check local shared pool
   const localPool = loadSharedVariantPool();
   const localHit = localPool.find(
     (v) => v.stepId === stepId && v.variantNumber === variantNumber
@@ -138,7 +74,26 @@ export async function getOrGenerateVariantSet(
     return { variant: localHit, source: 'local-cache' };
   }
 
-  // 3. Call Vercel Serverless API (Gemini API) to generate new variant set
+  // 3. Deterministic same-level, exact same-count mathematical generator (100% accurate, instant)
+  const spec = MICRO_STEPS_BY_ID[stepId];
+  if (spec) {
+    const variant: VariantProblemSet = {
+      id: `${stepId}-v${variantNumber}`,
+      stepId,
+      variantNumber,
+      questionCount: spec.questionCount,
+      markdown: renderStepMarkdown(spec, variantNumber),
+      createdAt: new Date().toISOString(),
+      createdBy: 'preset',
+    };
+    upsertSharedVariant(variant);
+    if (isFirebaseConfigured) {
+      void saveSharedVariantToFirestore(variant);
+    }
+    return { variant, source: 'generator' };
+  }
+
+  // 4. Fallback to Gemini API for custom non-catalog steps
   const res = await fetch('/api/generate-variants', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -156,7 +111,7 @@ export async function getOrGenerateVariantSet(
   if (!res.ok) {
     const errData = await res.json().catch(() => ({}));
     throw new Error(
-      errData.error || `類題生成APIの呼び出しに失敗しました (HTTP ${res.status})`
+      errData.error || `類題生成APIエラー (HTTP ${res.status})`
     );
   }
 
@@ -165,14 +120,10 @@ export async function getOrGenerateVariantSet(
     reused: boolean;
   };
 
-  // 4. Save to both local cache and Firestore so all other students reuse it!
   upsertSharedVariant(data.variant);
   if (isFirebaseConfigured) {
     await saveSharedVariantToFirestore(data.variant);
   }
 
-  return {
-    variant: data.variant,
-    source: data.reused ? 'server-cache' : 'gemini',
-  };
+  return { variant: data.variant, source: 'gemini' };
 }

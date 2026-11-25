@@ -3,7 +3,7 @@ import type {
   FeedbackStepLog,
   StudentProgress,
 } from '../types/curriculum';
-import { getNextStepId } from './contentLoader';
+import { getNextStepId, resolveStepId } from './contentLoader';
 
 const STORE_KEY = 'mathstep_progress_store_v2';
 export const DEFAULT_PASS_THRESHOLD = 90;
@@ -291,7 +291,7 @@ export function submitStepAttempt(
     completedSet.add(params.stepId);
     reviewSet.delete(params.stepId);
     nextStepId = getNextStepId(params.stepId);
-    if (current.currentStepId === params.stepId && nextStepId) {
+    if (resolveStepId(current.currentStepId) === resolveStepId(params.stepId) && nextStepId) {
       nextCurrentStepId = nextStepId;
     }
     delete nextVariantMap[params.stepId];

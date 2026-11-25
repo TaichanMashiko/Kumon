@@ -1,13 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Check, Download } from 'lucide-react';
-import { getOrderedStepIds } from '../lib/contentLoader';
+import {
+  ALL_MICRO_STEPS,
+  getStepSummary,
+  MICRO_STEPS_BY_STAGE,
+  STAGE_GROUPS,
+  type StageGroup,
+} from '../lib/contentLoader';
 import { buildFeedbackExportLog, type ProgressMap } from '../lib/store';
-import type { StepDocument, UserAccount, VariantProblemSet } from '../types/curriculum';
+import type { UserAccount, VariantProblemSet } from '../types/curriculum';
 
 interface TeacherDashboardProps {
   teacher: UserAccount;
   students: UserAccount[];
-  stepsById: Record<string, StepDocument>;
   progressStore: ProgressMap;
   variantPool: VariantProblemSet[];
   onApproveStep: (
@@ -27,7 +32,6 @@ type TeacherTab = 'grading' | 'history' | 'variants';
 
 export function TeacherDashboard({
   students,
-  stepsById,
   progressStore,
   variantPool,
   onApproveStep,
@@ -36,15 +40,20 @@ export function TeacherDashboard({
   onBulkToggleSelfStudy,
   onUpdatePassThreshold,
 }: TeacherDashboardProps) {
-  const orderedStepIds = getOrderedStepIds();
   const [selectedStudentId, setSelectedStudentId] = useState<string>(students[0]?.id ?? '');
   const [activeTab, setActiveTab] = useState<TeacherTab>('grading');
 
   const selectedStudent = students.find((s) => s.id === selectedStudentId) ?? students[0];
   const selectedProgress = selectedStudent ? progressStore[selectedStudent.id] : undefined;
+  const currentSummary = selectedProgress
+    ? getStepSummary(selectedProgress.currentStepId)
+    : null;
 
+  const [selectedStage, setSelectedStage] = useState<StageGroup>(
+    currentSummary?.stage ?? STAGE_GROUPS[0]
+  );
   const [assignStepId, setAssignStepId] = useState<string>(
-    selectedProgress?.currentStepId ?? orderedStepIds[0] ?? ''
+    currentSummary?.id ?? ALL_MICRO_STEPS[0].id
   );
   const [accuracyPercent, setAccuracyPercent] = useState<number>(90);
   const [comment, setComment] = useState<string>('');
@@ -57,22 +66,34 @@ export function TeacherDashboard({
   }, [selectedStudentId, students]);
 
   useEffect(() => {
-    if (selectedProgress?.currentStepId) {
-      setAssignStepId(selectedProgress.currentStepId);
+    if (currentSummary) {
+      setSelectedStage(currentSummary.stage);
+      setAssignStepId(currentSummary.id);
     }
-  }, [selectedProgress?.currentStepId, selectedStudentId]);
+  }, [selectedStudentId, selectedProgress?.currentStepId]);
+
+  const stageSteps = useMemo(
+    () => MICRO_STEPS_BY_STAGE[selectedStage] ?? [],
+    [selectedStage]
+  );
 
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 2800);
   };
 
+  const handleStageChange = (stage: StageGroup) => {
+    setSelectedStage(stage);
+    const first = MICRO_STEPS_BY_STAGE[stage]?.[0];
+    if (first) setAssignStepId(first.id);
+  };
+
   const handleApprove = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedStudent || !selectedProgress) return;
+    if (!selectedStudent || !currentSummary) return;
     const { passed } = onApproveStep(
       selectedStudent.id,
-      selectedProgress.currentStepId,
+      currentSummary.id,
       accuracyPercent,
       comment
     );
@@ -87,7 +108,7 @@ export function TeacherDashboard({
   const handleAssignStep = () => {
     if (!selectedStudent || !assignStepId) return;
     onAssignStep(selectedStudent.id, assignStepId);
-    showToast(`${selectedStudent.name} の学習内容を更新しました`);
+    showToast(`${selectedStudent.name} の学習レベルを変更しました`);
   };
 
   const handleExportLogs = () => {
@@ -161,7 +182,7 @@ export function TeacherDashboard({
                 const prog = progressStore[stu.id];
                 const isSelected = stu.id === selectedStudent?.id;
                 const isSelfStudy = Boolean(prog?.selfStudyEnabled);
-                const currentStep = prog ? stepsById[prog.currentStepId] : undefined;
+                const sum = prog ? getStepSummary(prog.currentStepId) : null;
 
                 return (
                   <div
@@ -182,11 +203,11 @@ export function TeacherDashboard({
                           {stu.name}
                         </span>
                         <span className="text-[11px] font-medium text-neutral-400">
-                          {prog?.completedStepIds.length ?? 0}/{orderedStepIds.length}
+                          Lv.{sum ? sum.index + 1 : 1}
                         </span>
                       </div>
                       <p className="mt-0.5 truncate text-xs text-neutral-500">
-                        {currentStep?.frontmatter.title ?? prog?.currentStepId}
+                        {sum ? `${sum.stage}・${sum.title}` : ''}
                       </p>
                     </button>
 
@@ -222,7 +243,7 @@ export function TeacherDashboard({
 
         {/* Right: Student Control Workspace */}
         <main className="rounded-2xl border border-neutral-200 bg-white p-6 sm:p-8">
-          {!selectedStudent || !selectedProgress ? (
+          {!selectedStudent || !selectedProgress || !currentSummary ? (
             <div className="py-16 text-center text-xs text-neutral-400">
               左のリストから生徒を選択してください。
             </div>
@@ -235,11 +256,8 @@ export function TeacherDashboard({
                     {selectedStudent.name}
                   </h1>
                   <p className="mt-0.5 text-xs text-neutral-500">
-                    {selectedStudent.classLabel} ・ 現在:{' '}
-                    <span className="font-semibold text-neutral-800">
-                      {stepsById[selectedProgress.currentStepId]?.frontmatter.title ??
-                        selectedProgress.currentStepId}
-                    </span>
+                    {selectedStudent.classLabel} ・ Lv.{currentSummary.index + 1}/
+                    {ALL_MICRO_STEPS.length}（{currentSummary.stage}・{currentSummary.title}）
                   </p>
                 </div>
 
@@ -267,33 +285,44 @@ export function TeacherDashboard({
                 </div>
               </div>
 
-              {/* TAB 1: Grading & Step Assignment */}
+              {/* TAB 1: Grading & 2-Level Cascaded Step Assignment */}
               {activeTab === 'grading' && (
                 <div className="mt-6 space-y-8">
-                  {/* Step Assignment by Teacher */}
-                  <section className="space-y-2.5">
+                  <section className="space-y-3">
                     <label className="block text-xs font-bold text-neutral-700">
-                      学習ステップの指定（生徒画面に表示する教材）
+                      学習レベルの指定（全 {ALL_MICRO_STEPS.length} ステップから選択）
                     </label>
-                    <div className="flex flex-wrap gap-2.5">
+                    <div className="grid gap-2.5 sm:grid-cols-[180px_1fr_auto]">
                       <select
-                        value={assignStepId}
-                        onChange={(e) => setAssignStepId(e.target.value)}
-                        className="min-w-0 flex-1 rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-xs font-medium text-neutral-900 focus:border-neutral-900 focus:bg-white focus:outline-none"
+                        value={selectedStage}
+                        onChange={(e) => handleStageChange(e.target.value as StageGroup)}
+                        className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-xs font-semibold text-neutral-900 focus:border-neutral-900 focus:bg-white focus:outline-none"
                       >
-                        {orderedStepIds.map((id, idx) => (
-                          <option key={id} value={id}>
-                            ステップ {idx + 1}：{stepsById[id]?.frontmatter.stage} —{' '}
-                            {stepsById[id]?.frontmatter.title}
+                        {STAGE_GROUPS.map((st) => (
+                          <option key={st} value={st}>
+                            {st} ({MICRO_STEPS_BY_STAGE[st].length})
                           </option>
                         ))}
                       </select>
+
+                      <select
+                        value={assignStepId}
+                        onChange={(e) => setAssignStepId(e.target.value)}
+                        className="min-w-0 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-xs font-medium text-neutral-900 focus:border-neutral-900 focus:bg-white focus:outline-none"
+                      >
+                        {stageSteps.map((step) => (
+                          <option key={step.id} value={step.id}>
+                            [{step.category}] {step.title}（{step.questionCount}問）
+                          </option>
+                        ))}
+                      </select>
+
                       <button
                         type="button"
                         onClick={handleAssignStep}
                         className="rounded-xl border border-neutral-900 bg-white px-4 py-2.5 text-xs font-semibold text-neutral-900 transition hover:bg-neutral-900 hover:text-white"
                       >
-                        この内容に設定
+                        設定する
                       </button>
                     </div>
                   </section>
@@ -373,7 +402,7 @@ export function TeacherDashboard({
                     <div className="flex items-center justify-between pt-1">
                       <span className="text-xs text-neutral-500">
                         {accuracyPercent >= threshold
-                          ? '合格として次のステップへ進みます'
+                          ? '合格として次のレベルへ進みます'
                           : `${threshold}%未満のため同問題数の類題へ切り替わります`}
                       </span>
                       <button
@@ -410,28 +439,31 @@ export function TeacherDashboard({
                       <p className="mt-2 text-xs text-neutral-400">履歴はありません。</p>
                     ) : (
                       <div className="mt-2 divide-y divide-neutral-100 rounded-xl border border-neutral-200">
-                        {selectedProgress.approvals.map((app) => (
-                          <div
-                            key={app.id}
-                            className="flex items-center justify-between px-4 py-3 text-xs"
-                          >
-                            <div>
-                              <span className="font-semibold text-neutral-900">
-                                {stepsById[app.stepId]?.frontmatter.title ?? app.stepId}
-                              </span>
-                              <span className="ml-2 text-neutral-400">
-                                {app.mode === 'self-study' ? '自習採点' : '教員採点'}
+                        {selectedProgress.approvals.map((app) => {
+                          const s = getStepSummary(app.stepId);
+                          return (
+                            <div
+                              key={app.id}
+                              className="flex items-center justify-between px-4 py-3 text-xs"
+                            >
+                              <div>
+                                <span className="font-semibold text-neutral-900">
+                                  {s.title}
+                                </span>
+                                <span className="ml-2 text-neutral-400">
+                                  {app.mode === 'self-study' ? '自習採点' : '教員採点'}
+                                </span>
+                              </div>
+                              <span
+                                className={`font-bold ${
+                                  app.passed ? 'text-emerald-700' : 'text-amber-700'
+                                }`}
+                              >
+                                {app.passed ? '合格' : '再挑戦'} {app.accuracyPercent}%
                               </span>
                             </div>
-                            <span
-                              className={`font-bold ${
-                                app.passed ? 'text-emerald-700' : 'text-amber-700'
-                              }`}
-                            >
-                              {app.passed ? '合格' : '再挑戦'} {app.accuracyPercent}%
-                            </span>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -477,24 +509,33 @@ export function TeacherDashboard({
                   </div>
 
                   <div className="divide-y divide-neutral-100 rounded-xl border border-neutral-200">
-                    {variantPool.map((v) => (
-                      <div
-                        key={v.id}
-                        className="flex items-center justify-between px-4 py-3 text-xs"
-                      >
-                        <div>
-                          <span className="font-semibold text-neutral-900">
-                            {stepsById[v.stepId]?.frontmatter.title ?? v.stepId}
-                          </span>
-                          <span className="ml-2 text-neutral-400">
-                            類題 {v.variantNumber}（全{v.questionCount}問）
-                          </span>
-                        </div>
-                        <span className="text-[11px] text-neutral-500">
-                          {v.createdBy === 'gemini' ? 'AI生成' : '標準'}
-                        </span>
-                      </div>
-                    ))}
+                    {variantPool.length === 0 ? (
+                      <p className="px-4 py-6 text-center text-xs text-neutral-400">
+                        まだ類題は生成されていません。
+                      </p>
+                    ) : (
+                      variantPool.map((v) => {
+                        const s = getStepSummary(v.stepId);
+                        return (
+                          <div
+                            key={v.id}
+                            className="flex items-center justify-between px-4 py-3 text-xs"
+                          >
+                            <div>
+                              <span className="font-semibold text-neutral-900">
+                                {s.title}
+                              </span>
+                              <span className="ml-2 text-neutral-400">
+                                類題 {v.variantNumber}（全{v.questionCount}問）
+                              </span>
+                            </div>
+                            <span className="text-[11px] text-neutral-500">
+                              {v.createdBy === 'gemini' ? 'AI生成' : '自動生成'}
+                            </span>
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
                 </div>
               )}

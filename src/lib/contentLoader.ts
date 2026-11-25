@@ -1,123 +1,94 @@
-import yaml from 'js-yaml';
-import curriculumMapRaw from '../../content/curriculum-map.json';
-import type {
-  CurriculumMap,
-  StepDocument,
-  StepFrontmatter,
-} from '../types/curriculum';
+import {
+  ALL_MICRO_STEPS,
+  MICRO_STEPS_BY_ID,
+  MICRO_STEPS_BY_STAGE,
+  STAGE_GROUPS,
+} from '../curriculum';
+import { renderStepMarkdown, type StageGroup } from '../curriculum/mathEngine';
+import type { StepDocument } from '../types/curriculum';
 
-const rawMarkdownFiles = import.meta.glob('../../content/units/**/*.md', {
-  query: '?raw',
-  import: 'default',
-  eager: true,
-}) as Record<string, string>;
+export { ALL_MICRO_STEPS, MICRO_STEPS_BY_ID, MICRO_STEPS_BY_STAGE, STAGE_GROUPS };
+export type { StageGroup };
 
-export const curriculumMap = curriculumMapRaw as CurriculumMap;
+const LEGACY_STEP_REDIRECT: Record<string, string> = {
+  'E-CALC-001': 'E5-FADD-001',
+  'E-CALC-002': 'E6-FMUL-001',
+  'J1-EQ-001': 'J1-EQ-4-001',
+  'M3-INT-010': 'H3-INT-BASE-001',
+  'M3-INT-011': 'H3-DIFF-001',
+  'M3-INT-011b': 'H3-INT-SUB-001',
+  'M3-INT-012': 'H3-INT-SUB-002',
+  'M3-INT-013': 'H3-INT-SUB-005',
+};
 
-function parseMarkdownWithFrontmatter(raw: string): {
-  frontmatter: StepFrontmatter;
-  body: string;
-} {
-  const normalized = raw.replace(/\r\n/g, '\n');
-  const match = normalized.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
-  if (!match) {
-    throw new Error('Invalid Markdown format: missing YAML frontmatter');
+export function resolveStepId(stepId: string): string {
+  if (MICRO_STEPS_BY_ID[stepId]) return stepId;
+  if (LEGACY_STEP_REDIRECT[stepId] && MICRO_STEPS_BY_ID[LEGACY_STEP_REDIRECT[stepId]]) {
+    return LEGACY_STEP_REDIRECT[stepId];
   }
-  const frontmatter = yaml.load(match[1]) as StepFrontmatter;
-  const body = match[2].trim();
-  return { frontmatter, body };
+  return ALL_MICRO_STEPS[0].id;
 }
 
-export function inferQuestionCount(body: string, explicitCount?: number): number {
-  if (explicitCount && explicitCount > 0) return explicitCount;
-  const practiceMatch = body.match(/# ✍️ 練習問題([\s\S]*?)(?:\n---|\n# 💡|$)/);
-  if (!practiceMatch) return 4;
-  const numbered = practiceMatch[1].match(/^\s*\d+\.\s+/gm);
-  return numbered && numbered.length > 0 ? numbered.length : 4;
-}
+export function getStepDocument(stepId: string, variantNumber = 0): StepDocument {
+  const resolvedId = resolveStepId(stepId);
+  const spec = MICRO_STEPS_BY_ID[resolvedId] ?? ALL_MICRO_STEPS[0];
+  const orderIndex = ALL_MICRO_STEPS.findIndex((s) => s.id === spec.id);
+  const prevId = orderIndex > 0 ? ALL_MICRO_STEPS[orderIndex - 1].id : null;
 
-export function loadAllSteps(): Record<string, StepDocument> {
-  const docsByPath: Record<string, { frontmatter: StepFrontmatter; body: string }> = {};
-
-  for (const [globPath, raw] of Object.entries(rawMarkdownFiles)) {
-    const normalizedPath = globPath.replace(/^\.\.\/\.\.\//, '');
-    docsByPath[normalizedPath] = parseMarkdownWithFrontmatter(raw);
-  }
-
-  const stepsById: Record<string, StepDocument> = {};
-  for (const unit of curriculumMap.units) {
-    for (const node of unit.steps) {
-      const parsed = docsByPath[node.file];
-      if (parsed) {
-        const questionCount = inferQuestionCount(
-          parsed.body,
-          node.question_count ?? parsed.frontmatter.question_count
-        );
-        stepsById[node.id] = {
-          frontmatter: {
-            ...parsed.frontmatter,
-            question_count: questionCount,
-          },
-          body: parsed.body,
-          filePath: node.file,
-          isAuxiliary: Boolean(node.is_auxiliary),
-        };
-      }
-    }
-  }
-
-  return stepsById;
+  return {
+    frontmatter: {
+      id: spec.id,
+      title: spec.title,
+      stage: spec.stage,
+      category: spec.category,
+      order: orderIndex + 1,
+      prerequisites: prevId ? [prevId] : [],
+      question_count: spec.questionCount,
+      stats: {
+        total_attempts: 0,
+        pass_rate_avg: 0,
+        clarity_score: 5.0,
+        confused_notes: [],
+      },
+      version: 1,
+      last_updated: '2026-11-25',
+    },
+    body: renderStepMarkdown(spec, variantNumber),
+    filePath: `generated/${spec.id}.md`,
+    isAuxiliary: false,
+  };
 }
 
 export function getOrderedStepIds(): string[] {
-  const ids: string[] = [];
-  for (const unit of curriculumMap.units) {
-    const sorted = [...unit.steps].sort((a, b) => a.order - b.order);
-    for (const step of sorted) {
-      ids.push(step.id);
-    }
-  }
-  return ids;
+  return ALL_MICRO_STEPS.map((s) => s.id);
 }
 
 export function getNextStepId(currentStepId: string): string | null {
-  const ordered = getOrderedStepIds();
-  const idx = ordered.indexOf(currentStepId);
-  if (idx === -1 || idx + 1 >= ordered.length) {
+  const resolvedId = resolveStepId(currentStepId);
+  const idx = ALL_MICRO_STEPS.findIndex((s) => s.id === resolvedId);
+  if (idx === -1 || idx + 1 >= ALL_MICRO_STEPS.length) {
     return null;
   }
-  return ordered[idx + 1];
+  return ALL_MICRO_STEPS[idx + 1].id;
 }
 
-export function getStudentRankInfo(completedStepIds: string[]): {
-  label: string;
-  stageLevel: number;
-  progressPercent: number;
+export function getStepSummary(stepId: string): {
+  id: string;
+  stage: StageGroup;
+  category: string;
+  title: string;
+  questionCount: number;
+  index: number;
 } {
-  const allIds = getOrderedStepIds();
-  const doneSet = new Set(completedStepIds);
-  const progressPercent =
-    allIds.length > 0 ? Math.round((doneSet.size / allIds.length) * 100) : 0;
-
-  let highestLevel = 1;
-  for (const unit of curriculumMap.units) {
-    const anyDone = unit.steps.some((s) => doneSet.has(s.id));
-    if (anyDone && unit.stage_level > highestLevel) {
-      highestLevel = unit.stage_level;
-    }
-  }
-
-  if (progressPercent === 100) {
-    return { label: '大学受験マスター到達', stageLevel: 4, progressPercent };
-  }
-  if (highestLevel >= 4) {
-    return { label: '大学受験レベル挑戦中（数Ⅲ）', stageLevel: 4, progressPercent };
-  }
-  if (highestLevel === 3) {
-    return { label: '高校数学レベル挑戦中', stageLevel: 3, progressPercent };
-  }
-  if (highestLevel === 2) {
-    return { label: '中学数学レベル挑戦中', stageLevel: 2, progressPercent };
-  }
-  return { label: '小学基礎レベル挑戦中', stageLevel: 1, progressPercent };
+  const resolvedId = resolveStepId(stepId);
+  const idx = ALL_MICRO_STEPS.findIndex((s) => s.id === resolvedId);
+  const spec = ALL_MICRO_STEPS[idx >= 0 ? idx : 0];
+  return {
+    id: spec.id,
+    stage: spec.stage,
+    category: spec.category,
+    title: spec.title,
+    questionCount: spec.questionCount,
+    index: idx >= 0 ? idx : 0,
+  };
 }

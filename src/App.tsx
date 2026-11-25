@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { LoginView } from './components/LoginView';
 import { Navbar } from './components/Navbar';
 import { RoleSetupView } from './components/RoleSetupView';
@@ -13,7 +13,7 @@ import {
   subscribeFirebaseAuth,
   type FirebaseIdentity,
 } from './lib/auth';
-import { loadAllSteps } from './lib/contentLoader';
+import { getStepSummary } from './lib/contentLoader';
 import { isFirebaseConfigured } from './lib/firebase';
 import {
   createDefaultStudentProgress,
@@ -38,7 +38,6 @@ import {
 } from './lib/store';
 import {
   loadSharedVariantPool,
-  PRESET_VARIANTS,
   saveSharedVariantPool,
 } from './lib/variantStore';
 import type {
@@ -63,9 +62,8 @@ export default function App() {
   const [variantPool, setVariantPool] = useState<VariantProblemSet[]>(() =>
     loadSharedVariantPool()
   );
-  const stepsById = useMemo(() => loadAllSteps(), []);
 
-  // Subscribe to Firebase Auth state and check whether user has registered role
+  // Subscribe to Firebase Auth state
   useEffect(() => {
     if (!isFirebaseConfigured) return;
     const unsub = subscribeFirebaseAuth((identity) => {
@@ -82,7 +80,6 @@ export default function App() {
             setUser(profile);
             setPendingIdentity(null);
           } else {
-            // 初回ログイン時は教員/生徒の登録画面へ
             setUser(null);
             setPendingIdentity(identity);
           }
@@ -103,12 +100,8 @@ export default function App() {
     if (!isFirebaseConfigured || !user) return;
 
     const unsubVariants = subscribeSharedVariantsFromFirestore((remoteVariants) => {
-      const mergedMap = new Map<string, VariantProblemSet>();
-      for (const p of PRESET_VARIANTS) mergedMap.set(p.id, p);
-      for (const r of remoteVariants) mergedMap.set(r.id, r);
-      const merged = Array.from(mergedMap.values());
-      setVariantPool(merged);
-      saveSharedVariantPool(merged);
+      setVariantPool(remoteVariants);
+      saveSharedVariantPool(remoteVariants);
     });
 
     if (user.role === 'student') {
@@ -179,8 +172,8 @@ export default function App() {
 
   if (!authReady) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm font-semibold text-slate-600">
-        ログイン状態を確認しています...
+      <div className="flex min-h-screen items-center justify-center bg-[#F7F8FA] text-xs font-medium text-neutral-500">
+        読み込み中...
       </div>
     );
   }
@@ -207,7 +200,7 @@ export default function App() {
 
   const currentStepTitle =
     user.role === 'student' && currentStudentProgress
-      ? stepsById[currentStudentProgress.currentStepId]?.frontmatter.title
+      ? getStepSummary(currentStudentProgress.currentStepId).title
       : '教員管理';
 
   return (
@@ -217,7 +210,6 @@ export default function App() {
       {user.role === 'student' && currentStudentProgress ? (
         <StudentDashboard
           user={user}
-          stepsById={stepsById}
           progress={currentStudentProgress}
           onRateClarity={(stepId, score) => {
             setProgressStore((prev) => {
@@ -274,11 +266,10 @@ export default function App() {
         <TeacherDashboard
           teacher={user}
           students={students}
-          stepsById={stepsById}
           progressStore={progressStore}
           variantPool={variantPool}
           onApproveStep={(studentId, stepId, accuracyPercent, comment) => {
-            const totalCount = stepsById[stepId]?.frontmatter.question_count ?? 4;
+            const totalCount = getStepSummary(stepId).questionCount;
             const result = submitStepAttempt(progressStore, {
               studentId,
               stepId,

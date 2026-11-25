@@ -26,7 +26,7 @@ export function createDefaultStudentProgress(studentId: string): StudentProgress
     selfStudyEnabled: false,
     passThresholdPercent: DEFAULT_PASS_THRESHOLD,
     completedStepIds: [],
-    currentStepId: 'E-CALC-001',
+    currentStepId: 'E1-ADD1-001',
     streakCount: 0,
     totalSolvedProblems: 0,
     activeVariantByStep: {},
