@@ -8,6 +8,12 @@ interface MarkdownMathProps {
   content: string;
 }
 
+function sanitizeHtmlSvg(raw: string): string {
+  return raw
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/\son[a-z]+\s*=\s*(['"]).*?\1/gi, '');
+}
+
 export function MarkdownMath({ content }: MarkdownMathProps) {
   return (
     <div className="math-markdown">
@@ -15,7 +21,7 @@ export function MarkdownMath({ content }: MarkdownMathProps) {
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeRaw, rehypeKatex]}
       >
-        {content}
+        {sanitizeHtmlSvg(content)}
       </ReactMarkdown>
     </div>
   );
