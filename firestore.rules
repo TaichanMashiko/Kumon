@@ -7,21 +7,21 @@ service cloud.firestore {
 
     function isTeacher() {
       return isSignedIn()
-        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+        && exists(/databases/$(database)/documents/kumon_users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/kumon_users/$(request.auth.uid)).data.role == 'teacher';
     }
 
-    match /users/{userId} {
+    match /kumon_users/{userId} {
       allow read: if isSignedIn() && (request.auth.uid == userId || isTeacher());
       allow write: if isSignedIn() && (request.auth.uid == userId || isTeacher());
     }
 
-    match /student_progress/{studentId} {
+    match /kumon_student_progress/{studentId} {
       allow read: if isSignedIn() && (request.auth.uid == studentId || isTeacher());
       allow write: if isSignedIn() && (request.auth.uid == studentId || isTeacher());
     }
 
-    match /shared_variants/{variantId} {
+    match /kumon_shared_variants/{variantId} {
       allow read: if isSignedIn();
       allow create, update: if isSignedIn();
     }

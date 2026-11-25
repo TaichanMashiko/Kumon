@@ -16,6 +16,10 @@ import type {
 import { db, isFirebaseConfigured } from './firebase';
 import { DEFAULT_PASS_THRESHOLD, type ProgressMap } from './store';
 
+const COL_USERS = 'kumon_users';
+const COL_PROGRESS = 'kumon_student_progress';
+const COL_VARIANTS = 'kumon_shared_variants';
+
 export function createDefaultStudentProgress(studentId: string): StudentProgress {
   return {
     studentId,
@@ -37,7 +41,7 @@ export async function fetchUserProfileFromFirestore(
   uid: string
 ): Promise<UserAccount | null> {
   if (!isFirebaseConfigured || !db) return null;
-  const snap = await getDoc(doc(db, 'users', uid));
+  const snap = await getDoc(doc(db, COL_USERS, uid));
   if (!snap.exists()) return null;
   return snap.data() as UserAccount;
 }
@@ -46,7 +50,7 @@ export async function ensureUserInFirestore(user: UserAccount): Promise<void> {
   if (!isFirebaseConfigured || !db) return;
 
   await setDoc(
-    doc(db, 'users', user.id),
+    doc(db, COL_USERS, user.id),
     {
       ...user,
       updatedAt: new Date().toISOString(),
@@ -55,7 +59,7 @@ export async function ensureUserInFirestore(user: UserAccount): Promise<void> {
   );
 
   if (user.role === 'student') {
-    const progRef = doc(db, 'student_progress', user.id);
+    const progRef = doc(db, COL_PROGRESS, user.id);
     const snap = await getDoc(progRef);
     if (!snap.exists()) {
       await setDoc(progRef, createDefaultStudentProgress(user.id));
@@ -67,7 +71,7 @@ export async function saveStudentProgressToFirestore(
   progress: StudentProgress
 ): Promise<void> {
   if (!isFirebaseConfigured || !db) return;
-  await setDoc(doc(db, 'student_progress', progress.studentId), progress, {
+  await setDoc(doc(db, COL_PROGRESS, progress.studentId), progress, {
     merge: true,
   });
 }
@@ -79,7 +83,7 @@ export function subscribeSingleStudentProgress(
   if (!isFirebaseConfigured || !db) {
     return () => {};
   }
-  const ref = doc(db, 'student_progress', studentId);
+  const ref = doc(db, COL_PROGRESS, studentId);
   return onSnapshot(ref, (snap) => {
     if (snap.exists()) {
       onUpdate(snap.data() as StudentProgress);
@@ -110,7 +114,7 @@ export function subscribeTeacherDashboardData(
   };
 
   const studentsQuery = query(
-    collection(db, 'users'),
+    collection(db, COL_USERS),
     where('role', '==', 'student')
   );
   const unsubUsers = onSnapshot(studentsQuery, (snap) => {
@@ -120,7 +124,7 @@ export function subscribeTeacherDashboardData(
     emit();
   });
 
-  const unsubProgress = onSnapshot(collection(db, 'student_progress'), (snap) => {
+  const unsubProgress = onSnapshot(collection(db, COL_PROGRESS), (snap) => {
     const map: ProgressMap = {};
     for (const d of snap.docs) {
       map[d.id] = d.data() as StudentProgress;
@@ -141,7 +145,7 @@ export async function fetchSharedVariantFromFirestore(
 ): Promise<VariantProblemSet | null> {
   if (!isFirebaseConfigured || !db) return null;
   const variantId = `${stepId}-v${variantNumber}`;
-  const snap = await getDoc(doc(db, 'shared_variants', variantId));
+  const snap = await getDoc(doc(db, COL_VARIANTS, variantId));
   if (!snap.exists()) return null;
   return snap.data() as VariantProblemSet;
 }
@@ -150,7 +154,7 @@ export async function saveSharedVariantToFirestore(
   variant: VariantProblemSet
 ): Promise<void> {
   if (!isFirebaseConfigured || !db) return;
-  await setDoc(doc(db, 'shared_variants', variant.id), variant, { merge: true });
+  await setDoc(doc(db, COL_VARIANTS, variant.id), variant, { merge: true });
 }
 
 export function subscribeSharedVariantsFromFirestore(
@@ -159,7 +163,7 @@ export function subscribeSharedVariantsFromFirestore(
   if (!isFirebaseConfigured || !db) {
     return () => {};
   }
-  return onSnapshot(collection(db, 'shared_variants'), (snap) => {
+  return onSnapshot(collection(db, COL_VARIANTS), (snap) => {
     const list = snap.docs
       .map((d) => d.data() as VariantProblemSet)
       .sort((a, b) => a.id.localeCompare(b.id));
