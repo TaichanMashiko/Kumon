@@ -58,6 +58,25 @@ export function FeedbackModal({
 
     setSubmitting(true);
     try {
+      let aiTriage = undefined;
+      try {
+        const res = await fetch('/api/triage-feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            category,
+            message: message.trim(),
+            stepId: currentStepId || '',
+            stepTitle: currentStepTitle || '',
+          }),
+        });
+        if (res.ok) {
+          aiTriage = await res.json();
+        }
+      } catch {
+        // Offline or local fallback: batch script will triage with Gemini API
+      }
+
       await saveAppFeedbackToFirestore({
         id: `fb-${Date.now()}`,
         userId: user.id,
@@ -68,6 +87,7 @@ export function FeedbackModal({
         stepTitle: currentStepTitle || '',
         createdAt: new Date().toISOString(),
         status: 'open',
+        ...(aiTriage ? { aiTriage } : {}),
       });
       localStorage.setItem('mathstep_last_feedback_ts', String(Date.now()));
       setSubmitted(true);

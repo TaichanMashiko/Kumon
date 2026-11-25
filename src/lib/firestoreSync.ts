@@ -23,6 +23,17 @@ const COL_VARIANTS = 'kumon_shared_variants';
 const COL_REMEDIATION_ANALYTICS = 'kumon_remediation_analytics';
 const COL_APP_FEEDBACK = 'kumon_app_feedback';
 
+export interface FeedbackAITriage {
+  decision: 'adopted' | 'pending_corroboration' | 'rejected' | 'ignored';
+  priority: 'HIGH' | 'MEDIUM' | 'LOW';
+  reason: string;
+  judgedBy: string;
+  suggestedRuleUpdate?: {
+    target: 'noiseKeywords' | 'policyConflictKeywords' | 'highSignalBugKeywords' | 'none';
+    pattern: string;
+  };
+}
+
 export interface AppFeedbackRecord {
   id: string;
   userId: string;
@@ -33,6 +44,7 @@ export interface AppFeedbackRecord {
   stepTitle: string;
   createdAt: string;
   status: 'open' | 'resolved';
+  aiTriage?: FeedbackAITriage;
 }
 
 export async function saveAppFeedbackToFirestore(
