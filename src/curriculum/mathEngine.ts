@@ -1,4 +1,7 @@
 import { generateExamProblem } from './examEngine';
+import { getWorkedExampleForSpec, type WorkedExample } from './workedExamples';
+
+export type { WorkedExample };
 
 export type StageGroup =
   | '小学校1年'
@@ -837,6 +840,7 @@ function generateSingleProblem(
 
 export interface GeneratedWorksheet {
   explanation: string;
+  workedExample: WorkedExample;
   problems: GeneratedProblem[];
   questionCount: number;
 }
@@ -936,6 +940,7 @@ export function generateWorksheetData(
 
   return {
     explanation: spec.explanation,
+    workedExample: getWorkedExampleForSpec(spec),
     problems,
     questionCount: spec.questionCount,
   };

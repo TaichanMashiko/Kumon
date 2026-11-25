@@ -75,6 +75,7 @@ export function StudentDashboard({
     if (activeVariantNum > 0 && loadedVariant?.problems?.length) {
       return {
         explanation: baseWorksheet.explanation,
+        workedExample: baseWorksheet.workedExample,
         problems: loadedVariant.problems,
         questionCount: loadedVariant.problems.length,
       };
@@ -284,7 +285,7 @@ export function StudentDashboard({
         </header>
 
         <div className="px-6 py-6 sm:px-9 sm:py-8">
-          {/* Collapsible Explanation (Hidden by Default!) */}
+          {/* Collapsible Explanation + Detailed Worked Example (Hidden by Default!) */}
           <div className="mb-6">
             <button
               type="button"
@@ -292,7 +293,9 @@ export function StudentDashboard({
               className="inline-flex items-center gap-2 rounded-xl border border-teal-200 bg-teal-50/60 px-4 py-2 text-xs font-bold text-teal-900 transition hover:bg-teal-100/70"
             >
               <BookOpen className="h-3.5 w-3.5 text-teal-700" />
-              <span>{showExplanation ? '解説を閉じる' : '解き方の解説を見る'}</span>
+              <span>
+                {showExplanation ? '解説・例題を閉じる' : '解き方の解説・例題を見る'}
+              </span>
               {showExplanation ? (
                 <ChevronUp className="h-3.5 w-3.5" />
               ) : (
@@ -301,10 +304,52 @@ export function StudentDashboard({
             </button>
 
             {showExplanation && (
-              <div className="mt-3 rounded-xl border border-teal-100 bg-teal-50/40 px-5 py-4 text-sm leading-relaxed text-slate-800">
-                <MarkdownMath content={worksheet.explanation} />
+              <div className="mt-3 space-y-4 rounded-xl border border-teal-100 bg-teal-50/40 px-5 py-4 text-sm leading-relaxed text-slate-800">
+                {/* 1. Point Summary */}
+                <div>
+                  <div className="mb-1 text-[11px] font-bold tracking-wide text-teal-800">
+                    解き方のポイント
+                  </div>
+                  <MarkdownMath content={worksheet.explanation} />
+                </div>
+
+                {/* 2. Detailed Worked Example with Step-by-Step Intermediate Calculations */}
+                <div className="rounded-xl border border-teal-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+                  <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 pb-2.5">
+                    <span className="rounded bg-teal-700 px-2 py-0.5 text-[11px] font-bold text-white">
+                      例題
+                    </span>
+                    <div className="math-inline font-semibold text-slate-900">
+                      <MarkdownMath content={worksheet.workedExample.problem} />
+                    </div>
+                  </div>
+
+                  <ol className="mt-3 space-y-2">
+                    {worksheet.workedExample.steps.map((stepText, sIdx) => (
+                      <li
+                        key={`ex-step-${sIdx}`}
+                        className="flex items-baseline gap-2.5 text-xs leading-relaxed text-slate-700 sm:text-sm"
+                      >
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-teal-100 text-[11px] font-bold text-teal-900">
+                          {sIdx + 1}
+                        </span>
+                        <div className="math-inline min-w-0 flex-1">
+                          <MarkdownMath content={stepText} />
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+
+                  <div className="mt-3 flex items-baseline gap-2 border-t border-slate-100 pt-2.5 text-sm font-bold text-teal-900">
+                    <span className="shrink-0 text-xs text-teal-700">答え：</span>
+                    <div className="math-inline">
+                      <MarkdownMath content={worksheet.workedExample.answer} />
+                    </div>
+                  </div>
+                </div>
+
                 {remediationSteps.length > 0 && (
-                  <div className="mt-3 border-t border-teal-200/60 pt-2.5 text-xs text-teal-900/80">
+                  <div className="border-t border-teal-200/60 pt-2.5 text-xs text-teal-900/80">
                     <span className="font-bold">つまずいたときの関連基礎：</span>
                     {remediationSteps
                       .map((r) => `${r.stage}「${r.title}」`)
