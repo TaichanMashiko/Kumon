@@ -67,13 +67,34 @@ export async function ensureUserInFirestore(user: UserAccount): Promise<void> {
   }
 }
 
+function stripUndefined<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((item) => stripUndefined(item)) as unknown as T;
+  }
+  if (value !== null && typeof value === 'object') {
+    const result: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      if (v !== undefined) {
+        result[k] = stripUndefined(v);
+      }
+    }
+    return result as T;
+  }
+  return value;
+}
+
 export async function saveStudentProgressToFirestore(
   progress: StudentProgress
 ): Promise<void> {
   if (!isFirebaseConfigured || !db) return;
-  await setDoc(doc(db, COL_PROGRESS, progress.studentId), progress, {
-    merge: true,
-  });
+  try {
+    await setDoc(
+      doc(db, COL_PROGRESS, progress.studentId),
+      stripUndefined(progress)
+    );
+  } catch (err) {
+    console.error('[Firestore] 進捗データの保存に失敗しました:', err);
+  }
 }
 
 export function subscribeSingleStudentProgress(

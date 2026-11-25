@@ -301,6 +301,20 @@ export function submitStepAttempt(
     nextVariantMap[params.stepId] = (nextVariantMap[params.stepId] ?? 0) + 1;
   }
 
+  const approvalRecord = {
+    id: `app-${Date.now()}`,
+    stepId: params.stepId,
+    accuracyPercent: params.accuracyPercent,
+    passed,
+    mode: params.mode,
+    approvedBy: params.approvedBy,
+    approvedAt: new Date().toISOString(),
+    ...(params.correctCount !== undefined ? { correctCount: params.correctCount } : {}),
+    ...(params.totalCount !== undefined ? { totalCount: params.totalCount } : {}),
+    ...(params.variantId ? { variantId: params.variantId } : {}),
+    ...(params.comment?.trim() ? { comment: params.comment.trim() } : {}),
+  };
+
   const updated: ProgressMap = {
     ...store,
     [params.studentId]: {
@@ -311,22 +325,7 @@ export function submitStepAttempt(
       totalSolvedProblems: current.totalSolvedProblems + solvedDelta,
       activeVariantByStep: nextVariantMap,
       reviewQueueStepIds: Array.from(reviewSet),
-      approvals: [
-        {
-          id: `app-${Date.now()}`,
-          stepId: params.stepId,
-          accuracyPercent: params.accuracyPercent,
-          correctCount: params.correctCount,
-          totalCount: params.totalCount,
-          passed,
-          mode: params.mode,
-          variantId: params.variantId,
-          approvedBy: params.approvedBy,
-          approvedAt: new Date().toISOString(),
-          comment: params.comment?.trim() || undefined,
-        },
-        ...current.approvals,
-      ],
+      approvals: [approvalRecord, ...current.approvals],
     },
   };
   saveProgressStore(updated);
