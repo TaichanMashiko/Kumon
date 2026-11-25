@@ -459,16 +459,28 @@ export function getWorkedExampleForSpec(spec: MicroStepSpec): WorkedExample {
         answer: '$2 < x < 3$',
       };
 
-    case 'hs1_trig_rel':
+    case 'hs1_trig_rel': {
+      if (params.obtuse) {
+        return {
+          problem: '$90^\\circ < \\theta < 180^\\circ$ で $\\sin\\theta = \\frac{3}{5}$ のとき $\\cos\\theta, \\tan\\theta$',
+          steps: [
+            '$\\cos^2\\theta = 1 - \\sin^2\\theta = 1 - \\frac{9}{25} = \\frac{16}{25}$',
+            '鈍角（$90^\\circ < \\theta < 180^\\circ$）なので $\\cos\\theta < 0$ より $\\cos\\theta = -\\frac{4}{5}$',
+            '$\\tan\\theta = \\frac{\\sin\\theta}{\\cos\\theta} = \\frac{3/5}{-4/5} = -\\frac{3}{4}$',
+          ],
+          answer: '$\\cos\\theta = -\\frac{4}{5}, \\ \\tan\\theta = -\\frac{3}{4}$',
+        };
+      }
       return {
         problem: '$0^\\circ < \\theta < 90^\\circ$ で $\\sin\\theta = \\frac{3}{5}$ のとき $\\cos\\theta, \\tan\\theta$',
         steps: [
           '$\\cos^2\\theta = 1 - \\sin^2\\theta = 1 - \\frac{9}{25} = \\frac{16}{25}$',
-          '鋭角なので $\\cos\\theta > 0$ より $\\cos\\theta = \\frac{4}{5}$',
+          '鋭角（$0^\\circ < \\theta < 90^\\circ$）なので $\\cos\\theta > 0$ より $\\cos\\theta = \\frac{4}{5}$',
           '$\\tan\\theta = \\frac{\\sin\\theta}{\\cos\\theta} = \\frac{3/5}{4/5} = \\frac{3}{4}$',
         ],
         answer: '$\\cos\\theta = \\frac{4}{5}, \\ \\tan\\theta = \\frac{3}{4}$',
       };
+    }
 
     case 'hs1_sine_cosine':
       return {

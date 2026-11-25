@@ -62,7 +62,7 @@ export default async function handler(req, res) {
 【元の問題（これらと重複しない新しい類題を作ること）】
 ${sampleList}`;
 
-    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+    const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
     const geminiRes = await fetch(endpoint, {

@@ -659,8 +659,11 @@ export function StudentDashboard({
 
       {/* Floating AI Question Button & Drawer */}
       <AiTutorPanel
-        key={activeStepId}
+        key={`${activeStepId}-${activeVariantNum}`}
         step={activeStep}
+        variantNumber={activeVariantNum}
+        explanation={worksheet.explanation}
+        problems={worksheet.problems}
         onLogConfusionNote={(note) => onAddConfusionNote(activeStepId, note)}
       />
 

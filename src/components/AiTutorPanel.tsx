@@ -1,20 +1,33 @@
 import { useState } from 'react';
 import { Loader2, MessageCircle, Send, X } from 'lucide-react';
-import type { AiChatMessage, StepDocument } from '../types/curriculum';
+import type {
+  AiChatMessage,
+  StepDocument,
+  VariantProblemItem,
+} from '../types/curriculum';
 import { MarkdownMath } from './MarkdownMath';
 
 interface AiTutorPanelProps {
   step: StepDocument;
+  variantNumber: number;
+  explanation: string;
+  problems: VariantProblemItem[];
   onLogConfusionNote?: (text: string) => void;
 }
 
 const QUICK_PROMPTS = [
   'この単元のポイントをわかりやすく教えて',
-  '1問目のヒントだけ教えて',
+  '(1)番の解き方のヒントだけ教えて',
   '途中の式変形がわからない',
 ];
 
-export function AiTutorPanel({ step, onLogConfusionNote }: AiTutorPanelProps) {
+export function AiTutorPanel({
+  step,
+  variantNumber,
+  explanation,
+  problems,
+  onLogConfusionNote,
+}: AiTutorPanelProps) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<AiChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -49,7 +62,10 @@ export function AiTutorPanel({ step, onLogConfusionNote }: AiTutorPanelProps) {
           stepId: step.frontmatter.id,
           stepTitle: step.frontmatter.title,
           stage: step.frontmatter.stage,
-          stepMarkdown: step.body,
+          category: step.frontmatter.category,
+          variantNumber,
+          explanation,
+          problems,
           question: trimmed,
           history: messages,
         }),

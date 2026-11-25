@@ -8,6 +8,7 @@ interface SeriesBlueprint {
   subLabels: string[];
   questionCount: number;
   explanation: string;
+  explanationFn?: (idx: number) => string;
   template: string;
   paramsFn?: (idx: number) => Record<string, number | string | boolean>;
 }
@@ -19,7 +20,7 @@ function expandSeries(bp: SeriesBlueprint): MicroStepSpec[] {
     category: bp.category,
     title: `${bp.baseTitle}（${label}）`,
     questionCount: bp.questionCount,
-    explanation: bp.explanation,
+    explanation: bp.explanationFn ? bp.explanationFn(idx) : bp.explanation,
     template: bp.template,
     params: bp.paramsFn ? bp.paramsFn(idx) : {},
   }));
@@ -145,10 +146,13 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       stage: '高校 数学Ⅰ',
       category: '4章 図形と計量',
       baseTitle: '三角比の値と相互関係',
-      subLabels: ['三角比の値・基本', '三角比の値・反復', '相互関係(鋭角)・基本', '相互関係(鋭角)・標準', '相互関係(鈍角)・入試演習'],
+      subLabels: ['相互関係(鋭角)・基本', '相互関係(鋭角)・反復', '相互関係(鋭角)・標準', '相互関係(鋭角)・定着', '相互関係(鈍角)・入試演習'],
       questionCount: 12,
-      explanation:
-        '$\\sin^2\\theta + \\cos^2\\theta = 1$、$\\tan\\theta = \\frac{\\sin\\theta}{\\cos\\theta}$ を用います。鈍角（$90^\\circ < \\theta < 180^\\circ$）では $\\cos\\theta < 0, \\tan\\theta < 0$ です。',
+      explanation: '',
+      explanationFn: (i) =>
+        i >= 4
+          ? '相互関係 $\\sin^2\\theta + \\cos^2\\theta = 1$、$\\tan\\theta = \\frac{\\sin\\theta}{\\cos\\theta}$ を用います。**鈍角（$90^\\circ < \\theta < 180^\\circ$）では $\\sin\\theta > 0, \\ \\cos\\theta < 0, \\ \\tan\\theta < 0$** となる点に注意しましょう。'
+          : '相互関係 $\\sin^2\\theta + \\cos^2\\theta = 1$、$\\tan\\theta = \\frac{\\sin\\theta}{\\cos\\theta}$ を用います。**鋭角（$0^\\circ < \\theta < 90^\\circ$）では $\\sin\\theta > 0, \\ \\cos\\theta > 0, \\ \\tan\\theta > 0$（すべて正）** です。',
       template: 'hs1_trig_rel',
       paramsFn: (i) => ({ obtuse: i >= 4 }),
     }),
