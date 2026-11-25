@@ -1,0 +1,109 @@
+{
+  "version": 3,
+  "last_updated": "2026-11-25",
+  "pass_threshold_percent": 90,
+  "units": [
+    {
+      "unit_id": "elem-calc",
+      "title": "ステージ1: 算数基礎（分数と計算の土台）",
+      "stage": "小学レベル",
+      "stage_level": 1,
+      "category": "算数 / 分数・計算の基礎",
+      "description": "すべての数学の土台となる通分・約分・分数の四則演算を、迷わず手が動くレベルまで反復習得します。",
+      "steps": [
+        {
+          "id": "E-CALC-001",
+          "title": "分数のたし算・ひき算（通分の基本）",
+          "order": 1,
+          "prerequisites": [],
+          "file": "content/units/elem-calc/step-001.md",
+          "question_count": 5,
+          "is_auxiliary": false
+        },
+        {
+          "id": "E-CALC-002",
+          "title": "分数のかけ算・わり算と約分のコツ",
+          "order": 2,
+          "prerequisites": ["E-CALC-001"],
+          "file": "content/units/elem-calc/step-002.md",
+          "question_count": 5,
+          "is_auxiliary": false
+        }
+      ]
+    },
+    {
+      "unit_id": "jh-eq",
+      "title": "ステージ2: 中学数学（文字式と1次方程式）",
+      "stage": "中学レベル",
+      "stage_level": 2,
+      "category": "中学数学 / 方程式",
+      "description": "未知数 x を使って式を立て、移項と等式の性質で機械的に解ける力を養います。",
+      "steps": [
+        {
+          "id": "J1-EQ-001",
+          "title": "移項を使った1次方程式の基本",
+          "order": 3,
+          "prerequisites": ["E-CALC-002"],
+          "file": "content/units/jh-eq/step-001.md",
+          "question_count": 5,
+          "is_auxiliary": false
+        }
+      ]
+    },
+    {
+      "unit_id": "m3-int",
+      "title": "ステージ4: 大学受験・高校数学Ⅲ（置換積分法マスター）",
+      "stage": "大学受験（高校3年）",
+      "stage_level": 4,
+      "category": "数学Ⅲ / 積分法",
+      "description": "不定積分の基本公式から出発し、合成関数の微分・dxとdtの変換・根号を含む置換積分までを90%以上マスタリーで習得します。",
+      "steps": [
+        {
+          "id": "M3-INT-010",
+          "title": "不定積分の基本公式とべき乗の確認",
+          "order": 10,
+          "prerequisites": ["J1-EQ-001"],
+          "file": "content/units/m3-int/step-010.md",
+          "question_count": 4,
+          "is_auxiliary": false
+        },
+        {
+          "id": "M3-INT-011",
+          "title": "合成関数の微分と置換のアイデア",
+          "order": 11,
+          "prerequisites": ["M3-INT-010"],
+          "file": "content/units/m3-int/step-011.md",
+          "question_count": 5,
+          "is_auxiliary": false
+        },
+        {
+          "id": "M3-INT-011b",
+          "title": "【補助ステップ】dx と dt の書き換え集中トレーニング",
+          "order": 11.5,
+          "prerequisites": ["M3-INT-011"],
+          "file": "content/units/m3-int/step-011b.md",
+          "question_count": 4,
+          "is_auxiliary": true
+        },
+        {
+          "id": "M3-INT-012",
+          "title": "置換積分法の基本",
+          "order": 12,
+          "prerequisites": ["M3-INT-011b"],
+          "file": "content/units/m3-int/step-012.md",
+          "question_count": 4,
+          "is_auxiliary": false
+        },
+        {
+          "id": "M3-INT-013",
+          "title": "根号を含む関数の置換積分",
+          "order": 13,
+          "prerequisites": ["M3-INT-012"],
+          "file": "content/units/m3-int/step-013.md",
+          "question_count": 3,
+          "is_auxiliary": false
+        }
+      ]
+    }
+  ]
+}

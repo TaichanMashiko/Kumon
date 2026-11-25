@@ -1,0 +1,37 @@
+{
+  "exported_at": "2026-11-25T10:00:00+09:00",
+  "source": "mathstep-weekly-export",
+  "steps": [
+    {
+      "step_id": "M3-INT-010",
+      "new_attempts": 5,
+      "accuracy_samples": [95, 100, 90, 85, 95],
+      "clarity_scores": [5, 5, 4, 5],
+      "confused_notes": []
+    },
+    {
+      "step_id": "M3-INT-011",
+      "new_attempts": 4,
+      "accuracy_samples": [85, 80, 90, 85],
+      "clarity_scores": [4, 4, 5, 4],
+      "confused_notes": []
+    },
+    {
+      "step_id": "M3-INT-012",
+      "new_attempts": 6,
+      "accuracy_samples": [60, 55, 65, 70, 50, 65],
+      "clarity_scores": [2, 3, 2, 3, 2],
+      "confused_notes": [
+        "tに置いた後のdxからdtへの変換が分からない",
+        "2xが式の外にないときどう変形すればいいか迷った"
+      ]
+    },
+    {
+      "step_id": "M3-INT-013",
+      "new_attempts": 3,
+      "accuracy_samples": [75, 80, 75],
+      "clarity_scores": [4, 4, 3],
+      "confused_notes": []
+    }
+  ]
+}
