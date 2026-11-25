@@ -1,4 +1,5 @@
-import { BookOpen, GraduationCap, LogOut, ShieldCheck } from 'lucide-react';
+import { BookOpen, Cloud, GraduationCap, LogOut, ShieldCheck } from 'lucide-react';
+import { isFirebaseConfigured } from '../lib/firebase';
 import type { UserAccount } from '../types/curriculum';
 
 interface NavbarProps {
@@ -17,16 +18,23 @@ export function Navbar({ user, onLogout }: NavbarProps) {
             <BookOpen className="h-5 w-5" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-base font-bold tracking-tight text-slate-900">
                 MathStep
               </span>
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
-                自律進化型 公文式デジタル数学
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                  isFirebaseConfigured
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : 'bg-amber-100 text-amber-800'
+                }`}
+              >
+                <Cloud className="h-3 w-3" />
+                {isFirebaseConfigured ? 'Firebase同期中' : 'デモ保存モード'}
               </span>
             </div>
             <p className="text-xs text-slate-500">
-              APIコストゼロ・ノート自学＆対面承認システム
+              自律進化型 公文式デジタル数学学習システム
             </p>
           </div>
         </div>

@@ -1,4 +1,16 @@
+import {
+  onAuthStateChanged,
+  signInWithPopup,
+  signOut,
+  type User as FirebaseUser,
+} from 'firebase/auth';
 import type { UserAccount } from '../types/curriculum';
+import {
+  auth,
+  googleProvider,
+  isFirebaseConfigured,
+  isTeacherEmail,
+} from './firebase';
 
 export const DEMO_ACCOUNTS: UserAccount[] = [
   {
@@ -28,7 +40,7 @@ export const DEMO_ACCOUNTS: UserAccount[] = [
   {
     id: 'tch-001',
     name: '山田 太郎 先生',
-    email: 't.yamada@school.ed.jp',
+    email: 'tmashiko@kiryo.ac.jp',
     role: 'teacher',
     classLabel: '数学科 担当',
     initials: '山',
@@ -36,6 +48,46 @@ export const DEMO_ACCOUNTS: UserAccount[] = [
 ];
 
 const AUTH_STORAGE_KEY = 'mathstep_auth_user_id_v1';
+
+export function mapFirebaseUserToAccount(fbUser: FirebaseUser): UserAccount {
+  const email = fbUser.email ?? '';
+  const teacher = isTeacherEmail(email);
+  const name = fbUser.displayName || email.split('@')[0] || 'ユーザー';
+  return {
+    id: fbUser.uid,
+    name,
+    email,
+    role: teacher ? 'teacher' : 'student',
+    classLabel: teacher ? '教員アカウント' : '生徒アカウント',
+    initials: name.slice(0, 1).toUpperCase(),
+  };
+}
+
+export async function signInWithGoogleFirebase(): Promise<UserAccount> {
+  if (!isFirebaseConfigured || !auth || !googleProvider) {
+    throw new Error('Firebase が設定されていません。');
+  }
+  const cred = await signInWithPopup(auth, googleProvider);
+  return mapFirebaseUserToAccount(cred.user);
+}
+
+export async function signOutFirebase(): Promise<void> {
+  if (isFirebaseConfigured && auth) {
+    await signOut(auth);
+  }
+  clearUserSession();
+}
+
+export function subscribeFirebaseAuth(
+  cb: (user: UserAccount | null) => void
+): () => void {
+  if (!isFirebaseConfigured || !auth) {
+    return () => {};
+  }
+  return onAuthStateChanged(auth, (fbUser) => {
+    cb(fbUser ? mapFirebaseUserToAccount(fbUser) : null);
+  });
+}
 
 export function getSavedUser(): UserAccount | null {
   try {
@@ -51,7 +103,7 @@ export function saveUserSession(user: UserAccount): void {
   try {
     localStorage.setItem(AUTH_STORAGE_KEY, user.id);
   } catch {
-    // Ignore storage errors in restricted contexts
+    // Ignore storage errors
   }
 }
 

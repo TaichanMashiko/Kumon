@@ -1,8 +1,13 @@
 import type { StepDocument, VariantProblemSet } from '../types/curriculum';
+import { isFirebaseConfigured } from './firebase';
+import {
+  fetchSharedVariantFromFirestore,
+  saveSharedVariantToFirestore,
+} from './firestoreSync';
 
 const VARIANT_POOL_KEY = 'mathstep_shared_variant_pool_v1';
 
-const PRESET_VARIANTS: VariantProblemSet[] = [
+export const PRESET_VARIANTS: VariantProblemSet[] = [
   {
     id: 'E-CALC-001-v1',
     stepId: 'E-CALC-001',
@@ -105,20 +110,35 @@ export function upsertSharedVariant(variant: VariantProblemSet): VariantProblemS
 export async function getOrGenerateVariantSet(
   step: StepDocument,
   variantNumber: number
-): Promise<{ variant: VariantProblemSet; source: 'local-cache' | 'server-cache' | 'gemini' }> {
+): Promise<{
+  variant: VariantProblemSet;
+  source: 'firestore-cache' | 'local-cache' | 'server-cache' | 'gemini';
+}> {
   const stepId = step.frontmatter.id;
   const questionCount = step.frontmatter.question_count ?? 4;
 
-  // 1. Check local shared pool first (zero API cost)
+  // 1. Check Firestore shared pool first (shared across all students & devices!)
+  if (isFirebaseConfigured) {
+    const remoteHit = await fetchSharedVariantFromFirestore(stepId, variantNumber);
+    if (remoteHit) {
+      upsertSharedVariant(remoteHit);
+      return { variant: remoteHit, source: 'firestore-cache' };
+    }
+  }
+
+  // 2. Check local / preset cache (zero API cost)
   const localPool = loadSharedVariantPool();
   const localHit = localPool.find(
     (v) => v.stepId === stepId && v.variantNumber === variantNumber
   );
   if (localHit) {
+    if (isFirebaseConfigured) {
+      void saveSharedVariantToFirestore(localHit);
+    }
     return { variant: localHit, source: 'local-cache' };
   }
 
-  // 2. Call Vercel Serverless API (checks server shared cache first, otherwise generates via Gemini & saves)
+  // 3. Call Vercel Serverless API (Gemini API) to generate new variant set
   const res = await fetch('/api/generate-variants', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -145,7 +165,12 @@ export async function getOrGenerateVariantSet(
     reused: boolean;
   };
 
+  // 4. Save to both local cache and Firestore so all other students reuse it!
   upsertSharedVariant(data.variant);
+  if (isFirebaseConfigured) {
+    await saveSharedVariantToFirestore(data.variant);
+  }
+
   return {
     variant: data.variant,
     source: data.reused ? 'server-cache' : 'gemini',

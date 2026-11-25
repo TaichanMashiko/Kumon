@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -10,12 +10,13 @@ import {
   Unlock,
   Users,
 } from 'lucide-react';
-import { getStudentAccounts } from '../lib/auth';
+import { isFirebaseConfigured } from '../lib/firebase';
 import { buildFeedbackExportLog, type ProgressMap } from '../lib/store';
 import type { StepDocument, UserAccount, VariantProblemSet } from '../types/curriculum';
 
 interface TeacherDashboardProps {
   teacher: UserAccount;
+  students: UserAccount[];
   stepsById: Record<string, StepDocument>;
   progressStore: ProgressMap;
   variantPool: VariantProblemSet[];
@@ -32,6 +33,7 @@ interface TeacherDashboardProps {
 }
 
 export function TeacherDashboard({
+  students,
   stepsById,
   progressStore,
   variantPool,
@@ -41,10 +43,15 @@ export function TeacherDashboard({
   onUpdatePassThreshold,
   onResetDemo,
 }: TeacherDashboardProps) {
-  const students = getStudentAccounts();
   const [selectedStudentId, setSelectedStudentId] = useState<string>(students[0]?.id ?? '');
   const selectedStudent = students.find((s) => s.id === selectedStudentId) ?? students[0];
   const selectedProgress = selectedStudent ? progressStore[selectedStudent.id] : undefined;
+
+  useEffect(() => {
+    if (!selectedStudentId && students[0]) {
+      setSelectedStudentId(students[0].id);
+    }
+  }, [selectedStudentId, students]);
 
   const [targetStepId, setTargetStepId] = useState<string>(
     selectedProgress?.currentStepId ?? Object.keys(stepsById)[0] ?? ''
@@ -163,17 +170,19 @@ export function TeacherDashboard({
             <Download className="h-3.5 w-3.5" />
             学習ログJSON出力
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              onResetDemo();
-              showToast('デモデータを初期状態に戻しました');
-            }}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            初期化
-          </button>
+          {!isFirebaseConfigured && (
+            <button
+              type="button"
+              onClick={() => {
+                onResetDemo();
+                showToast('デモデータを初期状態に戻しました');
+              }}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              初期化
+            </button>
+          )}
         </div>
       </div>
 
