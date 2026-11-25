@@ -252,6 +252,27 @@ export default function App() {
             }
             return { passed: result.passed, nextStepId: result.nextStepId };
           }}
+          onStartRemediation={(
+            remediationStepId,
+            fromTargetStepId,
+            lastAccuracy,
+            studentReason
+          ) => {
+            setProgressStore((prev) => {
+              const base = prev[user.id]
+                ? prev
+                : { ...prev, [user.id]: currentStudentProgress };
+              const withNote = studentReason
+                ? recordConfusionNote(base, user.id, fromTargetStepId, `[つまずき診断] ${studentReason}`)
+                : base;
+              const next = assignStudentStep(withNote, user.id, remediationStepId, {
+                fromTargetStepId,
+                lastAccuracy,
+              });
+              persistIfFirebase(next[user.id]);
+              return next;
+            });
+          }}
           onSelectVariantNumber={(stepId, variantNumber) => {
             setProgressStore((prev) => {
               const base = prev[user.id]

@@ -27,6 +27,7 @@ import type {
 } from '../types/curriculum';
 import { AiTutorPanel } from './AiTutorPanel';
 import { MarkdownMath } from './MarkdownMath';
+import { RemediationDiagnosisModal } from './RemediationDiagnosisModal';
 
 interface StudentDashboardProps {
   user: UserAccount;
@@ -39,6 +40,12 @@ interface StudentDashboardProps {
     totalCount: number,
     variantId?: string
   ) => { passed: boolean; nextStepId: string | null };
+  onStartRemediation: (
+    remediationStepId: string,
+    fromTargetStepId: string,
+    lastAccuracy: number,
+    studentReason: string
+  ) => void;
   onSelectVariantNumber: (stepId: string, variantNumber: number) => void;
   onVariantPoolChanged?: () => void;
 }
@@ -48,6 +55,7 @@ export function StudentDashboard({
   onRateClarity,
   onAddConfusionNote,
   onSelfGradeSubmit,
+  onStartRemediation,
   onVariantPoolChanged,
 }: StudentDashboardProps) {
   const resolvedStepId = resolveStepId(progress.currentStepId);
@@ -92,10 +100,23 @@ export function StudentDashboard({
   // Self-grading & confirmation modal state
   const [correctCount, setCorrectCount] = useState<number>(questionCount);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [diagnosisOpen, setDiagnosisOpen] = useState(false);
+  const [lastFailedAccuracy, setLastFailedAccuracy] = useState<number>(0);
   const [transitionBanner, setTransitionBanner] = useState<{
     kind: 'pass' | 'retry';
     message: string;
   } | null>(null);
+
+  // Count consecutive failed attempts on this step
+  const consecutiveFailsOnStep = useMemo(() => {
+    let count = 0;
+    for (const app of progress.approvals) {
+      if (resolveStepId(app.stepId) !== activeStepId) break;
+      if (app.passed) break;
+      count += 1;
+    }
+    return count;
+  }, [progress.approvals, activeStepId]);
 
   // Minimal feedback note state
   const [showNoteForm, setShowNoteForm] = useState(false);
@@ -139,10 +160,24 @@ export function StudentDashboard({
     setShowNoteForm(false);
   }, [activeStepId, activeVariantNum, questionCount]);
 
-  const remediationSteps = useMemo(
-    () => getRemediationSteps(activeStepId),
-    [activeStepId]
-  );
+  // Build remediation candidates (explicit prerequisites + immediate previous step as fallback)
+  const remediationSteps = useMemo(() => {
+    const linked = getRemediationSteps(activeStepId);
+    if (linked.length > 0) return linked;
+    if (stepIndex > 0) {
+      const prev = ALL_MICRO_STEPS[stepIndex - 1];
+      return [
+        {
+          id: prev.id,
+          stage: prev.stage,
+          category: prev.category,
+          title: prev.title,
+          index: stepIndex - 1,
+        },
+      ];
+    }
+    return [];
+  }, [activeStepId, stepIndex]);
 
   const currentRating = progress.clarityRatings[activeStepId]?.score;
   const currentAccuracy = Math.round((correctCount / questionCount) * 100);
@@ -170,10 +205,16 @@ export function StudentDashboard({
           : `全レベルを完了しました（正答率 ${accuracy}%）！`,
       });
     } else {
+      const nextFailCount = consecutiveFailsOnStep + 1;
+      setLastFailedAccuracy(accuracy);
       setTransitionBanner({
         kind: 'retry',
         message: `正答率 ${accuracy}%（合格基準 ${passThreshold}%）でした。同じレベルの類題（全${questionCount}問）に切り替わりました。`,
       });
+      // 同じステップで2回以上90%未満だった場合、つまずき診断＆戻り学習モーダルを自動表示！
+      if (nextFailCount >= 2 && remediationSteps.length > 0) {
+        setDiagnosisOpen(true);
+      }
     }
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -538,6 +579,37 @@ export function StudentDashboard({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Diagnostic Remediation Modal when student struggles repeatedly in self-study mode */}
+      {diagnosisOpen && remediationSteps.length > 0 && (
+        <RemediationDiagnosisModal
+          currentStepTitle={activeStep.frontmatter.title}
+          currentStepStage={activeStep.frontmatter.stage}
+          failCount={Math.max(2, consecutiveFailsOnStep)}
+          candidates={remediationSteps}
+          onAcceptRemediation={(remediationStepId, reasonText) => {
+            setDiagnosisOpen(false);
+            onStartRemediation(
+              remediationStepId,
+              activeStepId,
+              lastFailedAccuracy || 70,
+              reasonText
+            );
+            setTransitionBanner({
+              kind: 'retry',
+              message:
+                'おすすめの基礎レベルへ移動しました。90%以上で合格すると自動で元のレベルへ戻ります。',
+            });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onStayOnCurrent={(reasonText) => {
+            if (reasonText) {
+              onAddConfusionNote(activeStepId, `[つまずき診断] ${reasonText}`);
+            }
+            setDiagnosisOpen(false);
+          }}
+        />
       )}
 
       {/* Floating AI Question Button & Drawer */}

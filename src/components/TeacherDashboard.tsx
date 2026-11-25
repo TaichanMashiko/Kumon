@@ -83,10 +83,37 @@ export function TeacherDashboard({
     [selectedStage]
   );
 
-  const remediationSteps = useMemo(
-    () => (currentSummary ? getRemediationSteps(currentSummary.id) : []),
-    [currentSummary]
-  );
+  const remediationSteps = useMemo(() => {
+    if (!currentSummary) return [];
+    const linked = getRemediationSteps(currentSummary.id);
+    if (linked.length > 0) return linked;
+    if (currentSummary.index > 0) {
+      const prev = ALL_MICRO_STEPS[currentSummary.index - 1];
+      return [
+        {
+          id: prev.id,
+          stage: prev.stage,
+          category: prev.category,
+          title: prev.title,
+          index: currentSummary.index - 1,
+        },
+      ];
+    }
+    return [];
+  }, [currentSummary]);
+
+  const latestAttemptOnCurrent = useMemo(() => {
+    if (!selectedProgress || !currentSummary) return null;
+    return (
+      selectedProgress.approvals.find((a) => a.stepId === currentSummary.id) ?? null
+    );
+  }, [selectedProgress, currentSummary]);
+
+  const threshold = selectedProgress?.passThresholdPercent ?? 90;
+
+  const isCurrentlyFailing =
+    accuracyPercent < threshold ||
+    (latestAttemptOnCurrent !== null && !latestAttemptOnCurrent.passed);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -146,8 +173,6 @@ export function TeacherDashboard({
     a.click();
     URL.revokeObjectURL(url);
   };
-
-  const threshold = selectedProgress?.passThresholdPercent ?? 90;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -428,45 +453,67 @@ export function TeacherDashboard({
                     </div>
                   </form>
 
-                  {/* Diagnostic Remediation Links (戻り学習ワンクリック誘導) */}
+                  {/* Diagnostic Remediation Links (不合格時はおすすめレベルを強調提示！) */}
                   {remediationSteps.length > 0 && (
-                    <section className="space-y-2.5 border-t border-neutral-100 pt-6">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-xs font-bold text-neutral-700">
-                          つまずき時の戻り学習リンク（前提単元へワンクリック移動）
+                    <section
+                      className={`space-y-2.5 rounded-xl border p-4 transition ${
+                        isCurrentlyFailing
+                          ? 'border-amber-300 bg-amber-50/70'
+                          : 'border-neutral-200 bg-neutral-50/60'
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h3
+                          className={`text-xs font-bold ${
+                            isCurrentlyFailing ? 'text-amber-900' : 'text-neutral-700'
+                          }`}
+                        >
+                          {isCurrentlyFailing
+                            ? '不合格のためのおすすめ戻りレベル（前提単元へ戻して基礎を固める）'
+                            : 'つまずき時の戻り学習リンク（前提単元）'}
                         </h3>
-                        <span className="text-[11px] text-neutral-400">
+                        <span className="text-[11px] text-neutral-500">
                           {STAGE_TO_KUMON_RANK[currentSummary.stage]}
                         </span>
                       </div>
+
                       <div className="grid gap-2 sm:grid-cols-2">
-                        {remediationSteps.map((rem) => (
+                        {remediationSteps.map((rem, idx) => (
                           <button
                             key={rem.id}
                             type="button"
                             onClick={() => {
-                              const latestAttempt = selectedProgress.approvals.find(
-                                (a) => a.stepId === currentSummary.id
-                              );
                               onAssignStep(selectedStudent.id, rem.id, {
                                 fromTargetStepId: currentSummary.id,
-                                lastAccuracy: latestAttempt?.accuracyPercent ?? accuracyPercent,
+                                lastAccuracy:
+                                  latestAttemptOnCurrent?.accuracyPercent ?? accuracyPercent,
                               });
                               showToast(
                                 `${selectedStudent.name} を戻り学習（${rem.stage}・${rem.title}）に設定しました（効果測定を開始）`
                               );
                             }}
-                            className="flex items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50/60 px-3.5 py-2.5 text-left text-xs transition hover:border-amber-400 hover:bg-amber-50"
+                            className={`flex items-center justify-between gap-2 rounded-xl border px-3.5 py-2.5 text-left text-xs transition ${
+                              idx === 0 && isCurrentlyFailing
+                                ? 'border-amber-400 bg-white shadow-xs hover:bg-amber-50/50'
+                                : 'border-neutral-200 bg-white hover:border-amber-300'
+                            }`}
                           >
                             <div className="min-w-0">
-                              <div className="text-[11px] font-bold text-amber-800">
-                                {rem.stage}（Lv.{rem.index + 1}）
+                              <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-800">
+                                {idx === 0 && isCurrentlyFailing && (
+                                  <span className="rounded bg-amber-600 px-1.5 py-0.5 text-[10px] text-white">
+                                    第1おすすめ
+                                  </span>
+                                )}
+                                <span>
+                                  {rem.stage}（Lv.{rem.index + 1}）
+                                </span>
                               </div>
-                              <div className="truncate font-semibold text-neutral-800">
+                              <div className="mt-0.5 truncate font-semibold text-neutral-800">
                                 {rem.title}
                               </div>
                             </div>
-                            <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-white px-2 py-1 text-[11px] font-bold text-amber-900 shadow-2xs">
+                            <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-900">
                               <CornerUpLeft className="h-3 w-3" />
                               戻す
                             </span>
