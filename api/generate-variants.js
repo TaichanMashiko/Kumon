@@ -62,30 +62,48 @@ export default async function handler(req, res) {
 【元の問題（これらと重複しない新しい類題を作ること）】
 ${sampleList}`;
 
-    const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    const models = Array.from(
+      new Set([
+        process.env.GEMINI_MODEL || 'gemini-3.8-flash',
+        'gemini-3.8-flash',
+        'gemini-2.5-flash',
+        'gemini-2.5-flash-lite',
+        'gemini-2.0-flash',
+      ])
+    );
 
-    const geminiRes = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.75,
-          responseMimeType: 'application/json',
-          maxOutputTokens: 4096,
-        },
-      }),
-    });
-
-    if (!geminiRes.ok) {
-      const errText = await geminiRes.text();
-      return res.status(502).json({
-        error: `Gemini API エラー (${geminiRes.status}): ${errText.slice(0, 200)}`,
+    let data = null;
+    let lastStatus = 502;
+    for (const model of models) {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+      const geminiRes = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.75,
+            responseMimeType: 'application/json',
+            maxOutputTokens: 4096,
+          },
+        }),
       });
+
+      if (geminiRes.ok) {
+        data = await geminiRes.json();
+        break;
+      }
+      lastStatus = geminiRes.status;
+      if (![404, 429, 500, 502, 503, 504].includes(geminiRes.status)) {
+        break;
+      }
     }
 
-    const data = await geminiRes.json();
+    if (!data) {
+      return res.status(502).json({
+        error: `類題生成APIが一時的に混雑しています (${lastStatus})。`,
+      });
+    }
     const rawText =
       data?.candidates?.[0]?.content?.parts
         ?.map((p) => p.text || '')

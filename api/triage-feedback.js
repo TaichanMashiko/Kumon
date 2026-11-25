@@ -59,7 +59,15 @@ export default async function handler(req, res) {
   }
 }`;
 
-  const models = [process.env.GEMINI_MODEL || 'gemini-3.8-flash', 'gemini-2.5-flash'];
+  const models = Array.from(
+    new Set([
+      process.env.GEMINI_MODEL || 'gemini-3.8-flash',
+      'gemini-3.8-flash',
+      'gemini-2.5-flash',
+      'gemini-2.5-flash-lite',
+      'gemini-2.0-flash',
+    ])
+  );
   for (const model of models) {
     try {
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
@@ -77,7 +85,7 @@ export default async function handler(req, res) {
       });
 
       if (!geminiRes.ok) {
-        if (geminiRes.status === 404) continue;
+        if ([404, 429, 500, 502, 503, 504].includes(geminiRes.status)) continue;
         throw new Error(`Gemini error ${geminiRes.status}`);
       }
 

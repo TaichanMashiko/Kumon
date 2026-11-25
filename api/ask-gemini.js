@@ -1,12 +1,20 @@
 // Vercel Serverless Function: POST /api/ask-gemini
 // 生徒が今開いているステップ・類題番号・全問題文・解説を正確に受け取り、Gemini でヒント回答を返す
 
+const RETRYABLE_STATUS = new Set([404, 429, 500, 502, 503, 504]);
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function callGeminiWithFallback(apiKey, payload) {
   const candidates = Array.from(
     new Set([
       process.env.GEMINI_MODEL || 'gemini-3.8-flash',
       'gemini-3.8-flash',
       'gemini-2.5-flash',
+      'gemini-2.5-flash-lite',
+      'gemini-2.0-flash',
     ])
   );
 
@@ -15,21 +23,31 @@ async function callGeminiWithFallback(apiKey, payload) {
 
   for (const model of candidates) {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
+    const maxAttempts = model === candidates[0] ? 2 : 1;
 
-    if (res.ok) {
-      const data = await res.json();
-      return { ok: true, data, model };
-    }
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
 
-    lastStatus = res.status;
-    lastErr = await res.text();
-    // 404 (model unavailable) の場合のみ次のモデルへフォールバック
-    if (res.status !== 404) {
+      if (res.ok) {
+        const data = await res.json();
+        return { ok: true, data, model };
+      }
+
+      lastStatus = res.status;
+      lastErr = await res.text();
+
+      // 一時的な混雑(503/429)は短く待って再試行し、それでもダメなら次のモデルへ自動フォールバック
+      if ((res.status === 503 || res.status === 429) && attempt < maxAttempts) {
+        await sleep(700);
+        continue;
+      }
+      if (!RETRYABLE_STATUS.has(res.status)) {
+        return { ok: false, status: lastStatus, errorText: lastErr };
+      }
       break;
     }
   }
@@ -126,8 +144,12 @@ export default async function handler(req, res) {
     });
 
     if (!result.ok) {
-      return res.status(502).json({
-        error: `AI先生との通信でエラーが発生しました (${result.status}): ${result.errorText.slice(0, 220)}`,
+      const friendlyMsg =
+        result.status === 503 || result.status === 429
+          ? 'ただいまAI先生が大変混み合っています。5〜10秒ほど待ってから、もう一度送信してください。'
+          : `AI先生との通信に失敗しました（エラー ${result.status}）。少し時間を置いて再度お試しください。`;
+      return res.status(result.status === 503 || result.status === 429 ? 503 : 502).json({
+        error: friendlyMsg,
       });
     }
 
