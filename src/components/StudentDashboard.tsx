@@ -7,6 +7,7 @@ import {
   ChevronUp,
   Eye,
   EyeOff,
+  Loader2,
   Minus,
   PenLine,
   Plus,
@@ -19,7 +20,11 @@ import {
   resolveStepId,
 } from '../lib/contentLoader';
 import { getOrGenerateVariantSet } from '../lib/variantStore';
-import type { StudentProgress, UserAccount } from '../types/curriculum';
+import type {
+  StudentProgress,
+  UserAccount,
+  VariantProblemSet,
+} from '../types/curriculum';
 import { AiTutorPanel } from './AiTutorPanel';
 import { MarkdownMath } from './MarkdownMath';
 
@@ -50,11 +55,26 @@ export function StudentDashboard({
   const activeStepId = activeStep.frontmatter.id;
   const activeVariantNum = progress.activeVariantByStep[activeStepId] ?? 0;
 
-  // Structured worksheet (explanation + 2-column problems & answers)
-  const worksheet = useMemo(
-    () => getWorksheetData(activeStepId, activeVariantNum),
-    [activeStepId, activeVariantNum]
+  // Base worksheet (v0) + async loaded variant set (v1+: Firestore shared cache or Gemini AI)
+  const baseWorksheet = useMemo(
+    () => getWorksheetData(activeStepId, 0),
+    [activeStepId]
   );
+  const [loadedVariant, setLoadedVariant] = useState<VariantProblemSet | null>(null);
+  const [variantLoading, setVariantLoading] = useState(false);
+
+  const worksheet = useMemo(() => {
+    if (activeVariantNum > 0 && loadedVariant?.problems?.length) {
+      return {
+        explanation: baseWorksheet.explanation,
+        problems: loadedVariant.problems,
+        questionCount: loadedVariant.problems.length,
+      };
+    }
+    return activeVariantNum > 0
+      ? getWorksheetData(activeStepId, activeVariantNum)
+      : baseWorksheet;
+  }, [activeStepId, activeVariantNum, baseWorksheet, loadedVariant]);
 
   const stepIndex = Math.max(
     0,
@@ -82,13 +102,32 @@ export function StudentDashboard({
   const [noteInput, setNoteInput] = useState('');
   const [toast, setToast] = useState<string | null>(null);
 
-  // Sync variant to shared Firestore pool in background when activeVariantNum > 0
+  // Load or generate shared variant set when activeVariantNum > 0
   useEffect(() => {
-    if (activeVariantNum > 0) {
-      void getOrGenerateVariantSet(activeStep, activeVariantNum).then(() => {
-        onVariantPoolChanged?.();
-      });
+    let cancelled = false;
+    if (activeVariantNum <= 0) {
+      setLoadedVariant(null);
+      setVariantLoading(false);
+      return;
     }
+
+    setVariantLoading(true);
+    getOrGenerateVariantSet(activeStep, activeVariantNum)
+      .then(({ variant }) => {
+        if (cancelled) return;
+        setLoadedVariant(variant);
+        onVariantPoolChanged?.();
+      })
+      .catch(() => {
+        if (!cancelled) setLoadedVariant(null);
+      })
+      .finally(() => {
+        if (!cancelled) setVariantLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [activeStep, activeVariantNum, onVariantPoolChanged]);
 
   // Reset per-sheet UI when step or variant changes
@@ -243,21 +282,28 @@ export function StudentDashboard({
               </p>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {worksheet.problems.map((prob, idx) => (
-                <div
-                  key={`${activeStepId}-${activeVariantNum}-${idx}`}
-                  className="flex items-baseline gap-3 rounded-xl border border-slate-200/80 bg-[#FAFBFA] px-4 py-3.5 transition hover:border-teal-300/70"
-                >
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-teal-100 text-xs font-bold text-teal-900">
-                    {idx + 1}
-                  </span>
-                  <div className="math-inline min-w-0 flex-1 overflow-x-auto text-[15px] text-slate-900">
-                    <MarkdownMath content={prob.prompt} />
+            {variantLoading ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-12 text-xs text-slate-500">
+                <Loader2 className="h-5 w-5 animate-spin text-teal-700" />
+                <span>新しい類題セット（全 {questionCount} 問）を作成しています...</span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {worksheet.problems.map((prob, idx) => (
+                  <div
+                    key={`${activeStepId}-${activeVariantNum}-${idx}`}
+                    className="flex items-baseline gap-3 rounded-xl border border-slate-200/80 bg-[#FAFBFA] px-4 py-3.5 transition hover:border-teal-300/70"
+                  >
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-teal-100 text-xs font-bold text-teal-900">
+                      {idx + 1}
+                    </span>
+                    <div className="math-inline min-w-0 flex-1 overflow-x-auto text-[15px] text-slate-900">
+                      <MarkdownMath content={prob.prompt} />
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </section>
 
           {/* Collapsible 2-Column Answers Grid */}

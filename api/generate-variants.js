@@ -1,42 +1,5 @@
 // Vercel Serverless Function: POST /api/generate-variants
-// 同レベルの類題を同問題数で生成し、Upstash Redis / Vercel KV が設定されていれば永続保存して全生徒で再利用する
-
-async function kvGet(key) {
-  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
-  if (!url || !token) return null;
-
-  const res = await fetch(`${url}/get/${encodeURIComponent(key)}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) return null;
-  const data = await res.json();
-  if (!data?.result) return null;
-  try {
-    return JSON.parse(data.result);
-  } catch {
-    return null;
-  }
-}
-
-async function kvSet(key, value) {
-  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
-  if (!url || !token) return false;
-
-  const res = await fetch(`${url}/set/${encodeURIComponent(key)}`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(JSON.stringify(value)),
-  });
-  return res.ok;
-}
-
-// 同一インスタンス内でのフォールバック共有キャッシュ
-const memoryVariantCache = new Map();
+// 同レベル・同問題数の「真の類題」（単なる並び替えや数値入れ替えでない）をGemini APIで構造化JSON生成
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -48,77 +11,56 @@ export default async function handler(req, res) {
     title,
     stage,
     category,
-    questionCount = 4,
+    questionCount = 10,
     variantNumber = 1,
-    originalMarkdown = '',
+    originalProblems = [],
   } = req.body || {};
 
   if (!stepId) {
     return res.status(400).json({ error: 'stepId is required' });
   }
 
-  const cacheKey = `mathstep:variant:${stepId}:v${variantNumber}`;
-
-  // 1. Check shared KV / memory cache first -> Reuse across all students!
-  const kvHit = await kvGet(cacheKey);
-  if (kvHit) {
-    return res.status(200).json({ variant: kvHit, reused: true });
-  }
-  if (memoryVariantCache.has(cacheKey)) {
-    return res
-      .status(200)
-      .json({ variant: memoryVariantCache.get(cacheKey), reused: true });
-  }
-
-  // 2. Generate new variant set using Gemini API
   const apiKey =
     process.env.GEMINI_API_KEY ||
     process.env.GOOGLE_API_KEY ||
     process.env.API_KEY;
+
   if (!apiKey) {
     return res.status(503).json({
-      error:
-        '新規の類題を生成するには、Vercelの環境変数に GEMINI_API_KEY を設定してください。',
+      error: 'GEMINI_API_KEY が未設定のためAI類題を生成できません。',
     });
   }
 
   try {
-    const prompt = `あなたは公文式デジタル数学教材の作成AIです。
-以下のオリジナル教材と同じ難易度・同じ単元・同じ問題数（厳密に ${questionCount} 問）で、数値や関数を変えた新しい類題セット（類題 #${variantNumber}）を作成してください。
+    const sampleList = Array.isArray(originalProblems)
+      ? originalProblems
+          .slice(0, 10)
+          .map((p, i) => `${i + 1}. 問題: ${p.prompt} / 解答: ${p.answer}`)
+          .join('\n')
+      : '';
 
-【教材情報】
-- ステップID: ${stepId}
+    const prompt = `あなたは日本の数学専門教材作成AI（公文式〜茨城大・筑波大二次試験対策対応）です。
+生徒が以下のステップで90%未満だったため、再挑戦用の「類題セット #${variantNumber}」を作成してください。
+
+【厳守ルール】
+1. 問題数は厳密に **${questionCount} 問** とすること。
+2. 元の問題の「順番を入れ替えただけ」「数字の場所を変えただけ」は**絶対禁止**。同じ学習目標・同じ難易度を保ちながら、式の形・係数・関数・条件・問い方をしっかり変えた新しい類題を作成すること。
+3. 数学的に100%正確な解答（途中式の要点＋最終答）を必ず付けること。
+4. 数式は必ず KaTeX 記法（$...$）で記述すること。
+5. 出力は必ず以下の JSON 形式のみ（余計な前置きやマークダウン記号なし）：
+{
+  "problems": [
+    { "prompt": "問題文（KaTeX可）", "answer": "解答（KaTeX可）" }
+  ]
+}
+
+【対象ステップ】
+- ステージ: ${stage}
+- 単元: ${category}
 - タイトル: ${title}
-- ステージ: ${stage} / ${category}
-- 問題数: 厳密に ${questionCount} 問
 
-【出力フォーマット（厳守）】
-Markdown のみを出力してください（コードブロック \`\`\` で囲まないこと）。
-数式は必ず KaTeX 記法（$...$ / $$...$$）を使ってください。
-
-# ✍️ 類題トレーニング #${variantNumber}（全${questionCount}問）
-
-90%以上を目指して、手元のノートに鉛筆で解きましょう！
-
-1. （問題1）
-...
-${questionCount}. （問題${questionCount}）
-
----
-
-# 💡 解答（自己採点用）
-
-<details>
-<summary>解き終わったらここを押して答え合わせ</summary>
-
-1. （途中式と答え）
-...
-${questionCount}. （途中式と答え）
-
-</details>
-
-【参考：オリジナル教材】
-${originalMarkdown.slice(0, 3000)}`;
+【元の問題（これらと重複しない新しい類題を作ること）】
+${sampleList}`;
 
     const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
@@ -129,8 +71,9 @@ ${originalMarkdown.slice(0, 3000)}`;
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 2048,
+          temperature: 0.75,
+          responseMimeType: 'application/json',
+          maxOutputTokens: 4096,
         },
       }),
     });
@@ -143,28 +86,41 @@ ${originalMarkdown.slice(0, 3000)}`;
     }
 
     const data = await geminiRes.json();
-    let markdown =
+    const rawText =
       data?.candidates?.[0]?.content?.parts
         ?.map((p) => p.text || '')
-        .join('\n')
+        .join('')
         .trim() || '';
 
-    // Strip accidental outer markdown fences
-    markdown = markdown.replace(/^```(?:markdown|md)?\n/i, '').replace(/\n```$/, '');
+    const cleaned = rawText
+      .replace(/^```(?:json)?\n?/i, '')
+      .replace(/\n?```$/, '')
+      .trim();
+    const parsed = JSON.parse(cleaned);
+    const problems = Array.isArray(parsed?.problems)
+      ? parsed.problems
+          .filter((item) => item && typeof item.prompt === 'string' && typeof item.answer === 'string')
+          .slice(0, questionCount)
+      : [];
+
+    if (problems.length === 0) {
+      return res.status(502).json({ error: '有効な類題データを生成できませんでした。' });
+    }
+
+    const markdown = problems
+      .map((item, idx) => `${idx + 1}. ${item.prompt}`)
+      .join('\n');
 
     const variant = {
       id: `${stepId}-v${variantNumber}`,
       stepId,
       variantNumber,
-      questionCount,
+      questionCount: problems.length,
       markdown,
+      problems,
       createdAt: new Date().toISOString(),
       createdBy: 'gemini',
     };
-
-    // Save to shared cache so future students reuse it with zero API calls
-    memoryVariantCache.set(cacheKey, variant);
-    await kvSet(cacheKey, variant);
 
     return res.status(200).json({ variant, reused: false });
   } catch (err) {

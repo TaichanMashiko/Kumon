@@ -841,19 +841,95 @@ export interface GeneratedWorksheet {
   questionCount: number;
 }
 
+function buildStructuralVariant(
+  rng: () => number,
+  spec: MicroStepSpec,
+  base: GeneratedProblem,
+  variantNumber: number
+): GeneratedProblem {
+  // 小1〜小2の狭い範囲のたし算・ひき算は、類題時に「虫食い」「文章題」へ構造変化させて本当の理解を問う
+  if (spec.template === 'add') {
+    const m = base.prompt.match(/^\$(\d+)\s*\+\s*(\d+)\$$/);
+    if (m) {
+      const a = Number(m[1]);
+      const b = Number(m[2]);
+      const sum = a + b;
+      const mode = (variantNumber + Math.floor(rng() * 3)) % 3;
+      if (mode === 0) {
+        return { prompt: `$${a} + \\square = ${sum}$`, answer: `$\\square = ${b}$` };
+      }
+      if (mode === 1) {
+        return { prompt: `$\\square + ${b} = ${sum}$`, answer: `$\\square = ${a}$` };
+      }
+      const items = ['りんご', 'みかん', 'えんぴつ', 'あめ', 'カード'];
+      const item = items[Math.floor(rng() * items.length)];
+      return {
+        prompt: `${item}が $${a}$ こあります。$${b}$ こふえると、あわせて何こですか。`,
+        answer: `$${sum}$ こ`,
+      };
+    }
+  }
+  if (spec.template === 'sub') {
+    const m = base.prompt.match(/^\$(\d+)\s*-\s*(\d+)\$$/);
+    if (m) {
+      const a = Number(m[1]);
+      const b = Number(m[2]);
+      const diff = a - b;
+      const mode = (variantNumber + Math.floor(rng() * 2)) % 2;
+      if (mode === 0) {
+        return { prompt: `$${a} - \\square = ${diff}$`, answer: `$\\square = ${b}$` };
+      }
+      const items = ['おりがみ', 'あめ', 'シール', 'どんぐり'];
+      const item = items[Math.floor(rng() * items.length)];
+      return {
+        prompt: `${item}が $${a}$ こあります。$${b}$ こつかうと、のこりは何こですか。`,
+        answer: `$${diff}$ こ`,
+      };
+    }
+  }
+  return base;
+}
+
 export function generateWorksheetData(
   spec: MicroStepSpec,
   variantNumber = 0
 ): GeneratedWorksheet {
-  const rng = createRng(`${spec.id}::v${variantNumber}`);
+  // v0 の問題集合を先に把握し、類題 (variantNumber > 0) では極力重複を排除する
+  const excludePrompts = new Set<string>();
+  if (variantNumber > 0) {
+    const baseRng = createRng(`${spec.id}::v0`);
+    for (let i = 0; i < spec.questionCount; i += 1) {
+      const p0 = generateSingleProblem(baseRng, spec.template, spec.params, i);
+      excludePrompts.add(p0.prompt);
+    }
+  }
+
+  const rng = createRng(`${spec.id}::v${variantNumber}::salt${variantNumber * 997}`);
   const problems: GeneratedProblem[] = [];
   const seen = new Set<string>();
 
   for (let i = 0; i < spec.questionCount; i += 1) {
-    let prob = generateSingleProblem(rng, spec.template, spec.params, i);
-    for (let retry = 0; retry < 12 && seen.has(prob.prompt); retry += 1) {
-      prob = generateSingleProblem(rng, spec.template, spec.params, i + retry + 1);
+    let prob = generateSingleProblem(rng, spec.template, spec.params, i + variantNumber * 7);
+    let foundFresh = !seen.has(prob.prompt) && !excludePrompts.has(prob.prompt);
+
+    for (let retry = 0; retry < 30 && !foundFresh; retry += 1) {
+      prob = generateSingleProblem(
+        rng,
+        spec.template,
+        spec.params,
+        i + retry * 3 + variantNumber * 11
+      );
+      foundFresh = !seen.has(prob.prompt) && !excludePrompts.has(prob.prompt);
     }
+
+    // 定義域が狭い単元（例: 和が5まで）で新しい組み合わせが尽きた場合は、虫食い・文章題へ構造変換！
+    if (variantNumber > 0 && (excludePrompts.has(prob.prompt) || seen.has(prob.prompt))) {
+      const transformed = buildStructuralVariant(rng, spec, prob, variantNumber + i);
+      if (!seen.has(transformed.prompt)) {
+        prob = transformed;
+      }
+    }
+
     seen.add(prob.prompt);
     problems.push(prob);
   }

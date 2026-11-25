@@ -93,12 +93,18 @@ export interface ApprovalRecord {
   comment?: string;
 }
 
+export interface VariantProblemItem {
+  prompt: string;
+  answer: string;
+}
+
 export interface VariantProblemSet {
   id: string;
   stepId: string;
   variantNumber: number;
   questionCount: number;
   markdown: string;
+  problems?: VariantProblemItem[];
   createdAt: string;
   createdBy: 'gemini' | 'preset';
 }

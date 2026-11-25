@@ -1,5 +1,5 @@
 import { MICRO_STEPS_BY_ID } from '../curriculum';
-import { renderStepMarkdown } from '../curriculum/mathEngine';
+import { generateWorksheetData, renderStepMarkdown } from '../curriculum/mathEngine';
 import type { StepDocument, VariantProblemSet } from '../types/curriculum';
 import { isFirebaseConfigured } from './firebase';
 import {
@@ -7,7 +7,7 @@ import {
   saveSharedVariantToFirestore,
 } from './firestoreSync';
 
-const VARIANT_POOL_KEY = 'mathstep_shared_variant_pool_v2';
+const VARIANT_POOL_KEY = 'mathstep_shared_variant_pool_v3';
 
 export const PRESET_VARIANTS: VariantProblemSet[] = [];
 
@@ -43,6 +43,10 @@ export function upsertSharedVariant(variant: VariantProblemSet): VariantProblemS
   return pool;
 }
 
+function shouldUseGeminiForVariants(stage: string): boolean {
+  return stage.startsWith('高校') || stage.startsWith('大学入試');
+}
+
 export async function getOrGenerateVariantSet(
   step: StepDocument,
   variantNumber: number
@@ -51,21 +55,26 @@ export async function getOrGenerateVariantSet(
   source: 'firestore-cache' | 'local-cache' | 'generator' | 'gemini';
 }> {
   const stepId = step.frontmatter.id;
-  const questionCount = step.frontmatter.question_count ?? 15;
+  const spec = MICRO_STEPS_BY_ID[stepId];
+  const questionCount = spec?.questionCount ?? step.frontmatter.question_count ?? 10;
 
-  // 1. Check Firestore shared pool first (shared across all students & devices)
+  // 1. Check Firestore shared pool first (shared across ALL students & devices -> APIコストゼロ)
   if (isFirebaseConfigured) {
     const remoteHit = await fetchSharedVariantFromFirestore(stepId, variantNumber);
-    if (remoteHit) {
+    if (remoteHit && remoteHit.problems && remoteHit.problems.length > 0) {
       upsertSharedVariant(remoteHit);
       return { variant: remoteHit, source: 'firestore-cache' };
     }
   }
 
-  // 2. Check local shared pool
+  // 2. Check local shared cache
   const localPool = loadSharedVariantPool();
   const localHit = localPool.find(
-    (v) => v.stepId === stepId && v.variantNumber === variantNumber
+    (v) =>
+      v.stepId === stepId &&
+      v.variantNumber === variantNumber &&
+      Array.isArray(v.problems) &&
+      v.problems.length > 0
   );
   if (localHit) {
     if (isFirebaseConfigured) {
@@ -74,15 +83,52 @@ export async function getOrGenerateVariantSet(
     return { variant: localHit, source: 'local-cache' };
   }
 
-  // 3. Deterministic same-level, exact same-count mathematical generator (100% accurate, instant)
-  const spec = MICRO_STEPS_BY_ID[stepId];
+  // 3. 高校・大学入試レベルは Gemini API で「真の類題」を生成し、Firestore へ保存して全生徒で再利用！
+  if (shouldUseGeminiForVariants(step.frontmatter.stage)) {
+    try {
+      const originalData = spec ? generateWorksheetData(spec, 0) : null;
+      const res = await fetch('/api/generate-variants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stepId,
+          title: step.frontmatter.title,
+          stage: step.frontmatter.stage,
+          category: step.frontmatter.category,
+          questionCount,
+          variantNumber,
+          originalProblems: originalData?.problems ?? [],
+        }),
+      });
+
+      if (res.ok) {
+        const data = (await res.json()) as {
+          variant: VariantProblemSet;
+          reused: boolean;
+        };
+        if (data.variant?.problems && data.variant.problems.length > 0) {
+          upsertSharedVariant(data.variant);
+          if (isFirebaseConfigured) {
+            await saveSharedVariantToFirestore(data.variant);
+          }
+          return { variant: data.variant, source: 'gemini' };
+        }
+      }
+    } catch {
+      // Fallback gracefully to zero-overlap deterministic generator below
+    }
+  }
+
+  // 4. 小中計算ドリル（重複排除＋虫食い/文章題構造変化）＆フォールバック
   if (spec) {
+    const generated = generateWorksheetData(spec, variantNumber);
     const variant: VariantProblemSet = {
       id: `${stepId}-v${variantNumber}`,
       stepId,
       variantNumber,
-      questionCount: spec.questionCount,
+      questionCount: generated.questionCount,
       markdown: renderStepMarkdown(spec, variantNumber),
+      problems: generated.problems,
       createdAt: new Date().toISOString(),
       createdBy: 'preset',
     };
@@ -93,37 +139,5 @@ export async function getOrGenerateVariantSet(
     return { variant, source: 'generator' };
   }
 
-  // 4. Fallback to Gemini API for custom non-catalog steps
-  const res = await fetch('/api/generate-variants', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      stepId,
-      title: step.frontmatter.title,
-      stage: step.frontmatter.stage,
-      category: step.frontmatter.category,
-      questionCount,
-      variantNumber,
-      originalMarkdown: step.body,
-    }),
-  });
-
-  if (!res.ok) {
-    const errData = await res.json().catch(() => ({}));
-    throw new Error(
-      errData.error || `類題生成APIエラー (HTTP ${res.status})`
-    );
-  }
-
-  const data = (await res.json()) as {
-    variant: VariantProblemSet;
-    reused: boolean;
-  };
-
-  upsertSharedVariant(data.variant);
-  if (isFirebaseConfigured) {
-    await saveSharedVariantToFirestore(data.variant);
-  }
-
-  return { variant: data.variant, source: 'gemini' };
+  throw new Error('類題の生成に失敗しました。');
 }
