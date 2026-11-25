@@ -449,7 +449,17 @@ export function getWorkedExampleForSpec(spec: MicroStepSpec): WorkedExample {
         answer: '$k < 4$',
       };
 
-    case 'hs_quad_ineq':
+    case 'hs_quad_ineq': {
+      if (params.isGt) {
+        return {
+          problem: '$x^2 - 5x + 6 > 0$ を解け。',
+          steps: [
+            '左辺を因数分解します：$(x - 2)(x - 3) > 0$',
+            '下に凸の放物線が $x$ 軸より上にある範囲なので、2解の外側をとります。',
+          ],
+          answer: '$x < 2, \\ 3 < x$',
+        };
+      }
       return {
         problem: '$x^2 - 5x + 6 < 0$ を解け。',
         steps: [
@@ -458,6 +468,7 @@ export function getWorkedExampleForSpec(spec: MicroStepSpec): WorkedExample {
         ],
         answer: '$2 < x < 3$',
       };
+    }
 
     case 'hs1_trig_rel': {
       if (params.obtuse) {
@@ -522,7 +533,17 @@ export function getWorkedExampleForSpec(spec: MicroStepSpec): WorkedExample {
         answer: '$2$',
       };
 
-    case 'hs2_tangent_extrema':
+    case 'hs2_tangent_extrema': {
+      if (params.mode === 'tangent') {
+        return {
+          problem: '曲線 $y = x^2 + 1$ 上の点 $(2, 5)$ における接線の方程式',
+          steps: [
+            '微分して傾きを求めます：$y\' = 2x$、$x = 2$ を代入して傾き $4$。',
+            '接線公式に代入します：$y - 5 = 4(x - 2) \\implies y = 4x - 3$',
+          ],
+          answer: '$y = 4x - 3$',
+        };
+      }
       return {
         problem: '$f(x) = x^3 - 3x$ の極大値・極小値',
         steps: [
@@ -532,6 +553,7 @@ export function getWorkedExampleForSpec(spec: MicroStepSpec): WorkedExample {
         ],
         answer: '極大値 $2$ ($x=-1$)、極小値 $-2$ ($x=1$)',
       };
+    }
 
     case 'hsb_recurrence':
       return {

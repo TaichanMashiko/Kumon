@@ -7,8 +7,10 @@ interface SeriesBlueprint {
   baseTitle: string;
   subLabels: string[];
   questionCount: number;
-  explanation: string;
-  template: string;
+  explanation?: string;
+  explanationFn?: (idx: number) => string;
+  template?: string;
+  templateFn?: (idx: number) => string;
   paramsFn?: (idx: number) => Record<string, number | string | boolean>;
 }
 
@@ -19,8 +21,8 @@ function expandSeries(bp: SeriesBlueprint): MicroStepSpec[] {
     category: bp.category,
     title: `${bp.baseTitle}（${label}）`,
     questionCount: bp.questionCount,
-    explanation: bp.explanation,
-    template: bp.template,
+    explanation: bp.explanationFn ? bp.explanationFn(idx) : bp.explanation ?? '',
+    template: bp.templateFn ? bp.templateFn(idx) : bp.template ?? 'add',
     params: bp.paramsFn ? bp.paramsFn(idx) : {},
   }));
 }
@@ -261,14 +263,16 @@ export function buildElementaryCatalog(): MicroStepSpec[] {
       baseTitle: '3けたのたし算・ひき算（基礎）',
       subLabels: ['3けた＋2けた・基本', '3けた＋2けた・反復', '3けた＋3けた・基本', '3けた＋3けた・反復', '3けた−2けた・基本', '3けた−2けた・反復'],
       questionCount: 20,
-      explanation:
-        '百の位・十の位・一の位をたてにそろえ、右の一の位から順に計算します。くり上がりは1つ左の位へ送ります。',
-      template: 'add',
+      explanationFn: (i) =>
+        i >= 4
+          ? '百の位・十の位・一の位をたてにそろえ、一の位からひきます。ひけないときは左の位から $1$ くり下げます。'
+          : '百の位・十の位・一の位をたてにそろえ、一の位から順にたします。くり上がりは1つ左の位へ送ります。',
+      templateFn: (i) => (i >= 4 ? 'sub' : 'add'),
       paramsFn: (i) => ({
-        aMin: 100,
+        aMin: i >= 4 ? 200 : 100,
         aMax: 699,
-        bMin: i < 2 ? 12 : 100,
-        bMax: i < 2 ? 98 : 499,
+        bMin: i < 2 || i >= 4 ? 12 : 100,
+        bMax: i < 2 || i >= 4 ? 98 : 499,
       }),
     })
   );
@@ -483,9 +487,11 @@ export function buildElementaryCatalog(): MicroStepSpec[] {
       baseTitle: '2けた÷1けたの筆算',
       subLabels: ['あまりなし1', 'あまりなし2', 'あまりなし3', 'あまりあり1', 'あまりあり2', 'あまりあり3'],
       questionCount: 15,
-      explanation:
-        '十の位から順に「**①たてる → ②かける → ③ひく → ④おろす**」の4手順を繰り返します。\n\n**例**：$72 \\div 3$ は、十の位 $7 \\div 3 = 2$ あまり $1$、$2$ をおろして $12 \\div 3 = 4$ より **$24$** です。',
-      template: 'div_exact',
+      explanationFn: (i) =>
+        i >= 3
+          ? '十の位から順に「**①たてる → ②かける → ③ひく → ④おろす**」を繰り返します。最後に残った**あまりは必ずわる数より小さく**なります。'
+          : '十の位から順に「**①たてる → ②かける → ③ひく → ④おろす**」の4手順を繰り返します。',
+      templateFn: (i) => (i >= 3 ? 'div_rem' : 'div_exact'),
       paramsFn: () => ({ dMin: 2, dMax: 9, qMin: 11, qMax: 29 }),
     }),
     ...expandSeries({
@@ -497,7 +503,7 @@ export function buildElementaryCatalog(): MicroStepSpec[] {
       questionCount: 15,
       explanation:
         '百の位から商をたてます。百の位がわる数より小さくてたてられないときは、百の位と十の位をあわせた2けたで十の位に商をたてます。',
-      template: 'div_exact',
+      templateFn: (i) => (i >= 4 ? 'div_rem' : 'div_exact'),
       paramsFn: (i) => ({ dMin: 2, dMax: 9, qMin: i < 2 ? 105 : 25, qMax: i < 2 ? 299 : 98 }),
     }),
     ...expandSeries({
@@ -509,7 +515,7 @@ export function buildElementaryCatalog(): MicroStepSpec[] {
       questionCount: 15,
       explanation:
         'わる数を近い「何十」と見なして仮の商（仮商）をたてます。かけてみて引けなければ仮商を $1$ 小さくし、あまりがわる数以上なら $1$ 大きくして直します。',
-      template: 'div_exact',
+      templateFn: (i) => (i >= 6 ? 'div_rem' : 'div_exact'),
       paramsFn: (i) => ({ dMin: 12, dMax: 48, qMin: i >= 4 ? 11 : 2, qMax: i >= 4 ? 29 : 9 }),
     }),
     ...expandSeries({

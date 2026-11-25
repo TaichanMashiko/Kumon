@@ -7,9 +7,10 @@ interface SeriesBlueprint {
   baseTitle: string;
   subLabels: string[];
   questionCount: number;
-  explanation: string;
+  explanation?: string;
   explanationFn?: (idx: number) => string;
-  template: string;
+  template?: string;
+  templateFn?: (idx: number) => string;
   paramsFn?: (idx: number) => Record<string, number | string | boolean>;
 }
 
@@ -20,8 +21,8 @@ function expandSeries(bp: SeriesBlueprint): MicroStepSpec[] {
     category: bp.category,
     title: `${bp.baseTitle}（${label}）`,
     questionCount: bp.questionCount,
-    explanation: bp.explanationFn ? bp.explanationFn(idx) : bp.explanation,
-    template: bp.template,
+    explanation: bp.explanationFn ? bp.explanationFn(idx) : bp.explanation ?? '',
+    template: bp.templateFn ? bp.templateFn(idx) : bp.template ?? 'add',
     params: bp.paramsFn ? bp.paramsFn(idx) : {},
   }));
 }
@@ -42,20 +43,24 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       baseTitle: '1次式の積の展開・たすき掛け因数分解',
       subLabels: ['展開・基本', '展開・標準', 'たすき掛け・導入', 'たすき掛け・基本', 'たすき掛け・標準', 'たすき掛け・仕上げ'],
       questionCount: 12,
-      explanation:
-        '$(ax+b)(cx+d) = acx^2 + (ad+bc)x + bd$ の関係を用います。因数分解では積が $ac, bd$、たすき掛けの和が $ad+bc$ となる組を探します。',
-      template: 'factor_poly',
-      paramsFn: (i) => ({ kind: i < 2 ? 'monic' : 'tasuki' }),
+      explanationFn: (i) =>
+        i < 2
+          ? '分配法則を用いて $(ax+b)(cx+d) = acx^2 + (ad+bc)x + bd$ と展開します。'
+          : '$acx^2 + (ad+bc)x + bd = (ax+b)(cx+d)$ となるように、積が $ac, bd$・たすき掛けの和が $ad+bc$ になる組を探します。',
+      templateFn: (i) => (i < 2 ? 'expand_poly' : 'factor_poly'),
+      paramsFn: (i) => ({ kind: i < 2 ? 'ax_b_cx_d' : 'tasuki' }),
     }),
     ...expandSeries({
       prefix: 'H1-SYM',
       stage: '高校 数学Ⅰ',
       category: '1章 数と式',
-      baseTitle: '対称式の値（x²+y²・x³+y³）',
-      subLabels: ['2乗和・基本', '2乗和・応用', '3乗和・基本', '3乗和・入試演習'],
+      baseTitle: '対称式の値',
+      subLabels: ['2乗和(x²+y²)・基本', '2乗和(x²+y²)・応用', '3乗和(x³+y³)・基本', '3乗和(x³+y³)・入試演習'],
       questionCount: 10,
-      explanation:
-        '基本対称式 $x+y, xy$ で表します。\n\n- $x^2 + y^2 = (x+y)^2 - 2xy$\n- $x^3 + y^3 = (x+y)^3 - 3xy(x+y)$',
+      explanationFn: (i) =>
+        i < 2
+          ? '基本対称式 $x+y, \\ xy$ を使って **$x^2 + y^2 = (x+y)^2 - 2xy$** と変形して値を求めます。'
+          : '基本対称式 $x+y, \\ xy$ を使って **$x^3 + y^3 = (x+y)^3 - 3xy(x+y)$** と変形して値を求めます。',
       template: 'hs1_symmetric',
       paramsFn: (i) => ({ mode: i >= 2 ? 'cube' : 'sq' }),
     }),
@@ -64,10 +69,12 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       stage: '高校 数学Ⅰ',
       category: '1章 数と式',
       baseTitle: '二重根号の外し方',
-      subLabels: ['和の形・基本', '和の形・定着', '差の形・基本', '差の形・入試演習'],
+      subLabels: ['和の形(+)・基本', '和の形(+)・定着', '差の形(-)・基本', '差の形(-)・入試演習'],
       questionCount: 10,
-      explanation:
-        '$a > b > 0$ のとき、$\\sqrt{(a+b) \\pm 2\\sqrt{ab}} = \\sqrt{a} \\pm \\sqrt{b}$ を用います。たして前、かけて根号の中になる2数 $a, b$ を見つけます。',
+      explanationFn: (i) =>
+        i < 2
+          ? '$a > b > 0$ のとき、**$\\sqrt{(a+b) + 2\\sqrt{ab}} = \\sqrt{a} + \\sqrt{b}$** を用います。たして前、かけて根号の中になる2数 $a, b$ を見つけます。'
+          : '$a > b > 0$ のとき、**$\\sqrt{(a+b) - 2\\sqrt{ab}} = \\sqrt{a} - \\sqrt{b}$**（大きい方から小さい方を引く）を用います。',
       template: 'hs1_double_sqrt',
       paramsFn: (i) => ({ isMinus: i >= 2 }),
     }),
@@ -76,10 +83,14 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       stage: '高校 数学Ⅰ',
       category: '1章 数と式',
       baseTitle: '絶対値を含む方程式・不等式',
-      subLabels: ['方程式・基本', '方程式・標準', '不等式(<)・基本', '不等式(<)・標準', '不等式(>)・基本', '不等式(>)・入試演習'],
+      subLabels: ['方程式(=)・基本', '方程式(=)・標準', '不等式(<)・基本', '不等式(<)・標準', '不等式(>)・基本', '不等式(>)・入試演習'],
       questionCount: 10,
-      explanation:
-        '$c > 0$ のとき、$|A| = c \\iff A = \\pm c$、$|A| < c \\iff -c < A < c$、$|A| > c \\iff A < -c, \\ c < A$ を使います。',
+      explanationFn: (i) =>
+        i < 2
+          ? '$c > 0$ のとき、**$|A| = c \\iff A = \\pm c$**（原点からの距離が $c$ の2点）を用いて解きます。'
+          : i < 4
+          ? '$c > 0$ のとき、**$|A| < c \\iff -c < A < c$**（$-c$ と $c$ の内側）を用いて解きます。'
+          : '$c > 0$ のとき、**$|A| > c \\iff A < -c, \\ c < A$**（$-c$ と $c$ の外側）を用いて解きます。',
       template: 'hs1_abs_eq_ineq',
       paramsFn: (i) => ({ mode: i < 2 ? 'eq' : i < 4 ? 'lt' : 'gt' }),
     }),
@@ -101,8 +112,10 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       baseTitle: '平方完成とグラフの頂点',
       subLabels: ['係数1・基本', '係数1・標準', '係数a・基本', '係数a・標準', '係数a・入試演習'],
       questionCount: 12,
-      explanation:
-        '$y = ax^2 + bx + c$ は、まず $x^2$ と $x$ の項を $a$ でくくり、$x$ の係数の半分の2乗をたして引くことで $y = a(x-p)^2 + q$（頂点 $(p, q)$）に変形します。',
+      explanationFn: (i) =>
+        i < 2
+          ? '$y = x^2 + 2px + q$ は、$x$ の係数の半分の2乗をたして引くことで **$y = (x+p)^2 - p^2 + q$**（頂点 $(-p, -p^2+q)$）に変形します。'
+          : '$y = ax^2 + bx + c$ は、まず $x^2$ と $x$ の項を **$a$ でくくり出してから**、かっこの中を平方完成して $y = a(x-p)^2 + q$（頂点 $(p, q)$）にします。',
       template: 'hs_complete_sq',
       paramsFn: (i) => ({ leadOne: i < 2 ? 1 : 0 }),
     }),
@@ -124,8 +137,10 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       baseTitle: '判別式 D と共有点・実数解の条件',
       subLabels: ['実数解2個(D>0)・基本', '実数解2個(D>0)・応用', '接する条件(D=0)・基本', '接する条件(D=0)・入試演習'],
       questionCount: 10,
-      explanation:
-        '2次方程式 $ax^2+bx+c=0$ の判別式 $D = b^2 - 4ac$ について、$D > 0$ なら異なる2実数解、$D = 0$ なら重解（接する）、$D < 0$ なら実数解なしです。',
+      explanationFn: (i) =>
+        i < 2
+          ? '2次方程式 $ax^2+bx+c=0$ が**異なる2つの実数解をもつ条件は $D = b^2 - 4ac > 0$** です。'
+          : '2次関数のグラフが **$x$ 軸に接する条件は $D = b^2 - 4ac = 0$**（重解をもつ）です。',
       template: 'hs1_qf_disc',
       paramsFn: (i) => ({ mode: i >= 2 ? 'touch' : 'two' }),
     }),
@@ -136,8 +151,10 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       baseTitle: '2次不等式の解法',
       subLabels: ['< 0 型・基本', '< 0 型・標準', '> 0 型・基本', '> 0 型・標準', '総合入試演習'],
       questionCount: 12,
-      explanation:
-        'まず左辺を因数分解して2解 $\\alpha < \\beta$ を求め、放物線が $x$ 軸より下（$< 0$）か上（$> 0$）かで範囲を決めます。',
+      explanationFn: (i) =>
+        i < 2
+          ? '左辺を因数分解して2解 $\\alpha < \\beta$ を求めます。**$< 0$ 型は放物線が $x$ 軸より下にある範囲（2解の間 $\\alpha < x < \\beta$）** です。'
+          : '左辺を因数分解して2解 $\\alpha < \\beta$ を求めます。**$> 0$ 型は放物線が $x$ 軸より上にある範囲（2解の外側 $x < \\alpha, \\ \\beta < x$）** です。',
       template: 'hs_quad_ineq',
       paramsFn: (i) => ({ isGt: i >= 2 }),
     }),
@@ -148,7 +165,6 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       baseTitle: '三角比の値と相互関係',
       subLabels: ['相互関係(鋭角)・基本', '相互関係(鋭角)・反復', '相互関係(鋭角)・標準', '相互関係(鋭角)・定着', '相互関係(鈍角)・入試演習'],
       questionCount: 12,
-      explanation: '',
       explanationFn: (i) =>
         i >= 4
           ? '相互関係 $\\sin^2\\theta + \\cos^2\\theta = 1$、$\\tan\\theta = \\frac{\\sin\\theta}{\\cos\\theta}$ を用います。**鈍角（$90^\\circ < \\theta < 180^\\circ$）では $\\sin\\theta > 0, \\ \\cos\\theta < 0, \\ \\tan\\theta < 0$** となる点に注意しましょう。'
@@ -163,8 +179,12 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       baseTitle: '正弦定理・余弦定理・三角形の面積',
       subLabels: ['正弦定理・基本', '正弦定理・応用', '余弦定理・基本', '余弦定理・応用', '三角形の面積・基本', '三角形の面積・入試演習'],
       questionCount: 10,
-      explanation:
-        '- 正弦定理：$\\frac{a}{\\sin A} = 2R$\n- 余弦定理：$a^2 = b^2 + c^2 - 2bc\\cos A$\n- 面積：$S = \\frac{1}{2}bc\\sin A$',
+      explanationFn: (i) =>
+        i < 2
+          ? '**正弦定理** $\\displaystyle \\frac{a}{\\sin A} = 2R$ を用いて、辺と角から外接円の半径 $R$ を求めます。'
+          : i < 4
+          ? '**余弦定理** $a^2 = b^2 + c^2 - 2bc\\cos A$ を用いて、2辺とその間の角から残りの辺を求めます。'
+          : '**三角形の面積公式** $S = \\frac{1}{2}bc\\sin A$ を用いて、2辺とその間の角から面積を求めます。',
       template: 'hs1_sine_cosine',
       paramsFn: (i) => ({ mode: i < 2 ? 'sine' : i < 4 ? 'cosine' : 'area' }),
     }),
@@ -176,7 +196,7 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       subLabels: SETS_4,
       questionCount: 10,
       explanation:
-        '各値と平均値の差（偏差）を2乗し、その平均をとったものが分散 $s^2$ です。標準偏差は $s = \\sqrt{s^2}$ です。',
+        '各値と平均値の差（偏差）を2乗し、その平均をとったものが分散 $s^2$ です。',
       template: 'hs1_stats',
     })
   );
@@ -188,10 +208,12 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       stage: '高校 数学A',
       category: '1章 場合の数と確率',
       baseTitle: '順列 nPr と組合せ nCr',
-      subLabels: ['順列・基本', '順列・標準', '組合せ・基本', '組合せ・標準', '入試演習'],
+      subLabels: ['順列(P)・基本', '順列(P)・標準', '組合せ(C)・基本', '組合せ(C)・標準', '組合せ(C)・入試演習'],
       questionCount: 12,
-      explanation:
-        '並べる順序を区別するときは順列 $_n\\mathrm{P}_r$、選ぶだけのときは組合せ $_n\\mathrm{C}_r = \\frac{_n\\mathrm{P}_r}{r!}$ を使います。',
+      explanationFn: (i) =>
+        i < 2
+          ? '並べる順序を区別する**順列**は $_n\\mathrm{P}_r = n(n-1)\\cdots(n-r+1)$ で計算します。'
+          : '順序を区別せず選ぶ**組合せ**は $_n\\mathrm{C}_r = \\frac{_n\\mathrm{P}_r}{r!}$ で計算します。',
       template: 'hs_comb_perm',
       paramsFn: (i) => ({ mode: i < 2 ? 'P' : 'C' }),
     }),
@@ -200,10 +222,12 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       stage: '高校 数学A',
       category: '1章 場合の数と確率',
       baseTitle: '余事象の確率・反復試行の確率',
-      subLabels: ['余事象・基本', '余事象・応用', '反復試行・基本', '反復試行・応用', '入試演習'],
+      subLabels: ['余事象・基本', '余事象・応用', '反復試行・基本', '反復試行・応用', '反復試行・入試演習'],
       questionCount: 10,
-      explanation:
-        '「少なくとも1回」は $1 - (\\text{1回も起こらない確率})$（余事象）を使います。反復試行は $_n\\mathrm{C}_k p^k (1-p)^{n-k}$ です。',
+      explanationFn: (i) =>
+        i < 2
+          ? '「少なくとも1回起こる確率」は、**$1 - (\\text{1回も起こらない確率})$**（余事象）で求めます。'
+          : '同じ条件の試行を $n$ 回繰り返して $k$ 回起こる**反復試行の確率**は $_n\\mathrm{C}_k p^k (1-p)^{n-k}$ で求めます。',
       template: 'hsa_prob_events',
       paramsFn: (i) => ({ mode: i < 2 ? 'complement' : 'rep' }),
     }),
@@ -214,8 +238,10 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       baseTitle: '角の二等分線と比・方べきの定理',
       subLabels: ['角の二等分線・基本', '角の二等分線・標準', '方べきの定理・基本', '方べきの定理・入試演習'],
       questionCount: 10,
-      explanation:
-        '- 角の二等分線：$\\mathrm{BD}:\\mathrm{DC} = \\mathrm{AB}:\\mathrm{AC}$\n- 方べきの定理：$\\mathrm{PA}\\cdot\\mathrm{PB} = \\mathrm{PC}\\cdot\\mathrm{PD}$',
+      explanationFn: (i) =>
+        i < 2
+          ? '三角形の内角の二等分線と対辺の交点 $\\mathrm{D}$ は、対辺を他の2辺の比に内分します：**$\\mathrm{BD}:\\mathrm{DC} = \\mathrm{AB}:\\mathrm{AC}$**。'
+          : '円の2つの弦 $\\mathrm{AB, CD}$ が点 $\\mathrm{P}$ で交わるとき、**方べきの定理 $\\mathrm{PA}\\cdot\\mathrm{PB} = \\mathrm{PC}\\cdot\\mathrm{PD}$** が成り立ちます。',
       template: 'hsa_geom_theorems',
       paramsFn: (i) => ({ mode: i >= 2 ? 'power' : 'bisector' }),
     }),
@@ -223,11 +249,13 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       prefix: 'HA-INT',
       stage: '高校 数学A',
       category: '3章 整数の性質',
-      baseTitle: '約数の個数・n進法・整数の性質',
+      baseTitle: '約数の個数・2進法変換',
       subLabels: ['約数の個数・基本', '約数の個数・標準', '2進法変換・基本', '2進法変換・入試演習'],
       questionCount: 10,
-      explanation:
-        '素因数分解 $N = p^a q^b$ に対して正の約数の個数は $(a+1)(b+1)$ 個です。10進法から2進法へは $2$ で割り続けて余りを下から並べます。',
+      explanationFn: (i) =>
+        i < 2
+          ? '素因数分解 $N = p^a q^b$ に対して、正の約数の個数は **$(a+1)(b+1)$ 個** で求めます。'
+          : '10進法から2進法へは、商が $0$ になるまで **$2$ で割り続け、出た余りを下から順に並べる** と求まります。',
       template: 'hsa_int_diophantine',
       paramsFn: (i) => ({ mode: i >= 2 ? 'base' : 'divisors' }),
     })
@@ -250,12 +278,15 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       prefix: 'H2-CMP',
       stage: '高校 数学Ⅱ',
       category: '2章 複素数と方程式',
-      baseTitle: '複素数の四則・解と係数の関係',
+      baseTitle: '複素数の乗法・解と係数の関係',
       subLabels: ['複素数の積・基本', '複素数の積・標準', '解と係数の関係・基本', '解と係数の関係・入試演習'],
       questionCount: 12,
-      explanation:
-        '$ax^2+bx+c=0$ の2解 $\\alpha, \\beta$ に対し、$\\alpha+\\beta=-\\frac{b}{a}, \\ \\alpha\\beta=\\frac{c}{a}$ が成り立ちます。',
-      template: 'hs2_vieta',
+      explanationFn: (i) =>
+        i < 2
+          ? '多項式と同じように展開し、虚数単位の性質 **$i^2 = -1$** を代入して $a + bi$ の形に整理します。'
+          : '2次方程式 $ax^2+bx+c=0$ の2解 $\\alpha, \\beta$ に対し、**$\\alpha+\\beta=-\\frac{b}{a}, \\ \\alpha\\beta=\\frac{c}{a}$**（解と係数の関係）を用います。',
+      templateFn: (i) => (i < 2 ? 'hs_complex' : 'hs2_vieta'),
+      paramsFn: (i) => ({ isMul: i < 2 }),
     }),
     ...expandSeries({
       prefix: 'H2-REM',
@@ -265,7 +296,7 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       subLabels: SETS_5,
       questionCount: 10,
       explanation:
-        '整式 $P(x)$ を $x-k$ で割った余りは $P(k)$ に等しい（剰余の定理）。特に $P(k)=0$ なら $x-k$ を因数にもちます。',
+        '整式 $P(x)$ を1次式 $x-k$ で割った余りは **$P(k)$** に等しくなります（剰余の定理）。',
       template: 'hs2_remainder_cubic',
     }),
     ...expandSeries({
@@ -287,7 +318,7 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       subLabels: SETS_6,
       questionCount: 10,
       explanation:
-        '加法定理 $\\sin(\\alpha\\pm\\beta)=\\sin\\alpha\\cos\\beta\\pm\\cos\\alpha\\sin\\beta$、2倍角、および $a\\sin\\theta+b\\cos\\theta = \\sqrt{a^2+b^2}\\sin(\\theta+\\alpha)$ を自在に使いこなします。',
+        '加法定理 $\\sin(\\alpha\\pm\\beta)=\\sin\\alpha\\cos\\beta\\pm\\cos\\alpha\\sin\\beta$、2倍角、および $a\\sin\\theta+b\\cos\\theta = \\sqrt{a^2+b^2}\\sin(\\theta+\\alpha)$ を用います。',
       template: 'hs2_trig_add',
     }),
     ...expandSeries({
@@ -295,10 +326,12 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       stage: '高校 数学Ⅱ',
       category: '5章 指数関数と対数関数',
       baseTitle: '指数方程式・対数方程式',
-      subLabels: ['指数方程式・基本', '指数方程式・標準', '対数方程式・基本', '対数方程式・標準', '対数計算・入試演習'],
+      subLabels: ['指数方程式・基本', '指数方程式・標準', '対数方程式・基本', '対数方程式・標準', '対数方程式・入試演習'],
       questionCount: 12,
-      explanation:
-        '底をそろえて指数どうしを比較します。対数方程式では真数条件（真数 $> 0$）を必ず確認します。',
+      explanationFn: (i) =>
+        i < 2
+          ? '両辺の**底を同じ数にそろえ**、$a^p = a^q \\iff p = q$ として指数どうしを比較して解きます。'
+          : '対数の定義 $\\log_a M = p \\iff M = a^p$ を使って解き、求めた解が**真数条件（真数 $> 0$）**を満たすか確認します。',
       template: 'hs2_exp_log_eq',
       paramsFn: (i) => ({ mode: i >= 2 ? 'log' : 'exp' }),
     }),
@@ -307,10 +340,12 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       stage: '高校 数学Ⅱ',
       category: '6章 微分法と積分法',
       baseTitle: '接線の方程式・3次関数の極値',
-      subLabels: ['接線の方程式・基本', '接線の方程式・標準', '極大・極小・基本', '極大・極小・標準', '入試演習'],
+      subLabels: ['接線の方程式・基本', '接線の方程式・標準', '極大・極小・基本', '極大・極小・標準', '極大・極小・入試演習'],
       questionCount: 10,
-      explanation:
-        '接線の傾きは $f\'(a)$ で求まります。極値は $f\'(x)=0$ となる点の前後で符号が変わるかを増減表で確認して求めます。',
+      explanationFn: (i) =>
+        i < 2
+          ? '曲線 $y=f(x)$ 上の点 $(a, f(a))$ における接線の傾きは $f\'(a)$。公式 **$y - f(a) = f\'(a)(x - a)$** で求めます。'
+          : '導関数 $f\'(x) = 0$ の解を求め、その前後で $f\'(x)$ の符号が $+ \\to -$ なら極大、$- \\to +$ なら極小です。',
       template: 'hs2_tangent_extrema',
       paramsFn: (i) => ({ mode: i >= 2 ? 'extrema' : 'tangent' }),
     }),
@@ -336,8 +371,10 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       baseTitle: '等差数列・等比数列の一般項',
       subLabels: ['等差数列・基本', '等差数列・標準', '等比数列・基本', '等比数列・標準'],
       questionCount: 12,
-      explanation:
-        '等差数列は $a_n = a_1 + (n-1)d$、等比数列は $a_n = a_1 r^{n-1}$ を用います。',
+      explanationFn: (i) =>
+        i < 2
+          ? '初項 $a_1$、公差 $d$ の**等差数列**の一般項は **$a_n = a_1 + (n-1)d$** を用います。'
+          : '初項 $a_1$、公比 $r$ の**等比数列**の一般項は **$a_n = a_1 r^{n-1}$** を用います。',
       template: 'hs_seq',
       paramsFn: (i) => ({ kind: i >= 2 ? 'geom' : 'arith' }),
     }),
@@ -383,11 +420,13 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       stage: '高校 数学C',
       category: '1章 ベクトル',
       baseTitle: 'ベクトルの内積と垂直条件',
-      subLabels: ['内積計算・基本', '内積計算・標準', '垂直条件・基本', '垂直条件・標準', '入試演習'],
+      subLabels: ['内積計算・基本', '内積計算・標準', '垂直条件・基本', '垂直条件・標準', '垂直条件・入試演習'],
       questionCount: 12,
-      explanation:
-        '成分による内積は $\\vec{a}\\cdot\\vec{b} = a_1 b_1 + a_2 b_2$。ゼロでない2つのベクトルが垂直であるための必要十分条件は $\\vec{a}\\cdot\\vec{b} = 0$ です。',
-      template: 'hsc_vec_angle_perp',
+      explanationFn: (i) =>
+        i < 2
+          ? '成分による**内積**は **$\\vec{a}\\cdot\\vec{b} = a_1 b_1 + a_2 b_2$** で計算します。'
+          : 'ゼロでない2つのベクトルが**垂直**であるための必要十分条件は **$\\vec{a}\\cdot\\vec{b} = 0$** です。',
+      templateFn: (i) => (i < 2 ? 'hs_vector' : 'hsc_vec_angle_perp'),
     }),
     ...expandSeries({
       prefix: 'HC-CONIC',
@@ -396,8 +435,10 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       baseTitle: '放物線・楕円の標準形と焦点',
       subLabels: ['放物線の焦点と準線・基本', '放物線の焦点と準線・標準', '楕円の焦点・基本', '楕円の焦点・入試演習'],
       questionCount: 10,
-      explanation:
-        '放物線 $y^2 = 4px$ の焦点は $(p, 0)$・準線は $x=-p$。楕円 $\\frac{x^2}{a^2}+\\frac{y^2}{b^2}=1 \\ (a>b>0)$ の焦点は $(\\pm\\sqrt{a^2-b^2}, 0)$ です。',
+      explanationFn: (i) =>
+        i < 2
+          ? '**放物線 $y^2 = 4px$** の焦点は **$(p, 0)$**、準線は **$x = -p$** です。$x$ の係数を $4$ で割って $p$ を求めます。'
+          : '**楕円 $\\frac{x^2}{a^2} + \\frac{y^2}{b^2} = 1 \\ (a > b > 0)$** の焦点は **$\\bigl(\\pm\\sqrt{a^2 - b^2}, \\ 0\\bigr)$** です。',
       template: 'hsc_conics',
       paramsFn: (i) => ({ mode: i >= 2 ? 'ellipse' : 'parabola' }),
     }),
@@ -423,8 +464,12 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       baseTitle: '数列の極限・無限等比級数・三角関数の極限',
       subLabels: ['分数式の極限・基本', '分数式の極限・標準', '無限等比級数の和・基本', '無限等比級数の和・標準', 'sin x / x の極限・基本', 'sin x / x の極限・入試演習'],
       questionCount: 10,
-      explanation:
-        '- 分数式は分母の最高次で割る\n- 無限等比級数（$|r|<1$）の和は $\\frac{a}{1-r}$\n- $\\lim_{x\\to 0}\\frac{\\sin x}{x} = 1$',
+      explanationFn: (i) =>
+        i < 2
+          ? '分数式の極限では、**分母の最高次の項（$n^2$ など）で分母・分子を割り**、$\\frac{1}{n} \\to 0$ を用います。'
+          : i < 4
+          ? '初項 $a$、公比 $r$（$|r| < 1$）の**無限等比級数の和**は **$\\displaystyle \\frac{a}{1 - r}$** で求めます。'
+          : '公式 **$\\displaystyle \\lim_{x \\to 0} \\frac{\\sin x}{x} = 1$** が使えるように、$\\sin ax$ の下を $ax$ にそろえて定数倍を調整します。',
       template: 'hs3_limits',
       paramsFn: (i) => ({ mode: i < 2 ? 'rational' : i < 4 ? 'series' : 'trig' }),
     }),
