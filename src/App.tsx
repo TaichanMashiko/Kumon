@@ -19,6 +19,7 @@ import {
   createDefaultStudentProgress,
   ensureUserInFirestore,
   fetchUserProfileFromFirestore,
+  saveRemediationOutcomeToFirestore,
   saveStudentProgressToFirestore,
   subscribeSharedVariantsFromFirestore,
   subscribeSingleStudentProgress,
@@ -246,6 +247,9 @@ export default function App() {
             });
             setProgressStore(result.store);
             persistIfFirebase(result.store[user.id]);
+            if (isFirebaseConfigured && result.newRemediationOutcome) {
+              void saveRemediationOutcomeToFirestore(result.newRemediationOutcome);
+            }
             return { passed: result.passed, nextStepId: result.nextStepId };
           }}
           onSelectVariantNumber={(stepId, variantNumber) => {
@@ -279,11 +283,14 @@ export default function App() {
             });
             setProgressStore(result.store);
             persistIfFirebase(result.store[studentId]);
+            if (isFirebaseConfigured && result.newRemediationOutcome) {
+              void saveRemediationOutcomeToFirestore(result.newRemediationOutcome);
+            }
             return { passed: result.passed };
           }}
-          onAssignStep={(studentId, stepId) => {
+          onAssignStep={(studentId, stepId, remediationMeta) => {
             setProgressStore((prev) => {
-              const next = assignStudentStep(prev, studentId, stepId);
+              const next = assignStudentStep(prev, studentId, stepId, remediationMeta);
               persistIfFirebase(next[studentId]);
               return next;
             });

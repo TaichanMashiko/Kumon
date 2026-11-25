@@ -110,10 +110,30 @@ export interface AiChatMessage {
   createdAt: string;
 }
 
+export interface ActiveRemediationContext {
+  targetStepId: string;
+  remediationStepId: string;
+  accuracyBefore: number;
+  startedAt: string;
+  remediationPassed?: boolean;
+}
+
+export interface RemediationOutcomeRecord {
+  id: string;
+  studentId: string;
+  targetStepId: string;
+  remediationStepId: string;
+  accuracyBefore: number;
+  accuracyAfter: number;
+  accuracyGain: number;
+  passedAfter: boolean;
+  recordedAt: string;
+}
+
 export interface StudentProgress {
   studentId: string;
   selfStudyEnabled: boolean;
-  passThresholdPercent: number; // default 90
+  passThresholdPercent: number; // default 90 (self-study enforces >= 90)
   completedStepIds: string[];
   currentStepId: string;
   streakCount: number;
@@ -122,6 +142,10 @@ export interface StudentProgress {
   activeVariantByStep: Record<string, number>;
   /** stepIds that had <90% attempt and are queued for spaced review */
   reviewQueueStepIds: string[];
+  /** Tracks active remediation loop so we measure whether returning to a prerequisite fixes the target step */
+  activeRemediation?: ActiveRemediationContext;
+  /** Historical remediation correlation outcomes for weekly curriculum evolution */
+  remediationOutcomes?: RemediationOutcomeRecord[];
   clarityRatings: Record<string, ClarityRating>;
   confusionNotes: ConfusionNoteEntry[];
   approvals: ApprovalRecord[];
@@ -139,4 +163,5 @@ export interface FeedbackExportLog {
   exported_at: string;
   source: string;
   steps: FeedbackStepLog[];
+  remediation_outcomes: RemediationOutcomeRecord[];
 }

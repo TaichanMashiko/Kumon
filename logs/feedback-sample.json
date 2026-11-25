@@ -33,5 +33,29 @@
       "clarity_scores": [4, 4, 3],
       "confused_notes": []
     }
+  ],
+  "remediation_outcomes": [
+    {
+      "id": "rem-sample-1",
+      "studentId": "stu-001",
+      "targetStepId": "UNIV-INTEQ-001",
+      "remediationStepId": "H2-INT-AREA-001",
+      "accuracyBefore": 50,
+      "accuracyAfter": 100,
+      "accuracyGain": 50,
+      "passedAfter": true,
+      "recordedAt": "2026-11-24T15:00:00+09:00"
+    },
+    {
+      "id": "rem-sample-2",
+      "studentId": "stu-002",
+      "targetStepId": "UNIV-INTEQ-001",
+      "remediationStepId": "E5-FADD-001",
+      "accuracyBefore": 50,
+      "accuracyAfter": 60,
+      "accuracyGain": 10,
+      "passedAfter": false,
+      "recordedAt": "2026-11-24T16:00:00+09:00"
+    }
   ]
 }

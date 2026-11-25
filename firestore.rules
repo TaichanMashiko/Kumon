@@ -25,5 +25,10 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create, update: if isSignedIn();
     }
+
+    match /kumon_remediation_analytics/{outcomeId} {
+      allow read: if isTeacher();
+      allow create, update: if isSignedIn();
+    }
   }
 }

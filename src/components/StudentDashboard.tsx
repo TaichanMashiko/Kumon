@@ -62,7 +62,8 @@ export function StudentDashboard({
   );
   const totalSteps = ALL_MICRO_STEPS.length;
   const questionCount = worksheet.questionCount;
-  const passThreshold = progress.passThresholdPercent ?? 90;
+  // 自習モードでは必ず90%以上を合格ラインとして強制
+  const passThreshold = Math.max(90, progress.passThresholdPercent ?? 90);
 
   // UI toggles (explanation & answers hidden by default!)
   const [showExplanation, setShowExplanation] = useState(false);

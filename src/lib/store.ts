@@ -1,6 +1,7 @@
 import type {
   FeedbackExportLog,
   FeedbackStepLog,
+  RemediationOutcomeRecord,
   StudentProgress,
 } from '../types/curriculum';
 import { getNextStepId, resolveStepId } from './contentLoader';
@@ -273,26 +274,86 @@ export interface SubmitAttemptParams {
 export function submitStepAttempt(
   store: ProgressMap,
   params: SubmitAttemptParams
-): { store: ProgressMap; passed: boolean; nextStepId: string | null } {
+): {
+  store: ProgressMap;
+  passed: boolean;
+  nextStepId: string | null;
+  newRemediationOutcome?: RemediationOutcomeRecord;
+} {
   const current = store[params.studentId];
   if (!current) return { store, passed: false, nextStepId: null };
 
-  const threshold = current.passThresholdPercent ?? DEFAULT_PASS_THRESHOLD;
-  const passed = params.accuracyPercent >= threshold;
-  const solvedDelta = params.totalCount ?? 4;
+  // 自習モードでは正答率90%以上でない限り絶対に合格としない
+  const baseThreshold = current.passThresholdPercent ?? DEFAULT_PASS_THRESHOLD;
+  const effectiveThreshold =
+    params.mode === 'self-study' ? Math.max(90, baseThreshold) : baseThreshold;
+  const passed = params.accuracyPercent >= effectiveThreshold;
+  const solvedDelta = params.totalCount ?? 10;
 
   const completedSet = new Set(current.completedStepIds);
   const reviewSet = new Set(current.reviewQueueStepIds);
   let nextCurrentStepId = current.currentStepId;
   let nextStepId: string | null = null;
   const nextVariantMap = { ...current.activeVariantByStep };
+  let nextActiveRemediation = current.activeRemediation;
+  let nextOutcomes = [...(current.remediationOutcomes ?? [])];
+  let newRemediationOutcome: RemediationOutcomeRecord | undefined;
+
+  const resolvedParamStep = resolveStepId(params.stepId);
+
+  // 戻り学習の因果相関トラッキング
+  if (nextActiveRemediation) {
+    // 1. 戻り先ステップに合格した場合 -> 元のつまずきステップへ戻す準備を記録
+    if (
+      passed &&
+      resolveStepId(nextActiveRemediation.remediationStepId) === resolvedParamStep
+    ) {
+      nextActiveRemediation = {
+        ...nextActiveRemediation,
+        remediationPassed: true,
+      };
+    }
+    // 2. 元のつまずきステップに再挑戦した場合 -> 改善効果（相関データ）を記録！
+    else if (
+      resolveStepId(nextActiveRemediation.targetStepId) === resolvedParamStep &&
+      nextActiveRemediation.remediationPassed
+    ) {
+      newRemediationOutcome = {
+        id: `rem-${Date.now()}`,
+        studentId: params.studentId,
+        targetStepId: resolvedParamStep,
+        remediationStepId: nextActiveRemediation.remediationStepId,
+        accuracyBefore: nextActiveRemediation.accuracyBefore,
+        accuracyAfter: params.accuracyPercent,
+        accuracyGain: params.accuracyPercent - nextActiveRemediation.accuracyBefore,
+        passedAfter: passed,
+        recordedAt: new Date().toISOString(),
+      };
+      nextOutcomes = [newRemediationOutcome, ...nextOutcomes];
+      if (passed) {
+        nextActiveRemediation = undefined;
+      }
+    }
+  }
 
   if (passed) {
     completedSet.add(params.stepId);
     reviewSet.delete(params.stepId);
-    nextStepId = getNextStepId(params.stepId);
-    if (resolveStepId(current.currentStepId) === resolveStepId(params.stepId) && nextStepId) {
-      nextCurrentStepId = nextStepId;
+    // 戻り学習ステップに合格した直後は、元のつまずきステップへ自動復帰させて効果検証！
+    if (
+      nextActiveRemediation?.remediationPassed &&
+      resolveStepId(nextActiveRemediation.remediationStepId) === resolvedParamStep
+    ) {
+      nextStepId = nextActiveRemediation.targetStepId;
+      nextCurrentStepId = nextActiveRemediation.targetStepId;
+    } else {
+      nextStepId = getNextStepId(params.stepId);
+      if (
+        resolveStepId(current.currentStepId) === resolvedParamStep &&
+        nextStepId
+      ) {
+        nextCurrentStepId = nextStepId;
+      }
     }
     delete nextVariantMap[params.stepId];
   } else {
@@ -325,17 +386,20 @@ export function submitStepAttempt(
       totalSolvedProblems: current.totalSolvedProblems + solvedDelta,
       activeVariantByStep: nextVariantMap,
       reviewQueueStepIds: Array.from(reviewSet),
+      ...(nextActiveRemediation ? { activeRemediation: nextActiveRemediation } : { activeRemediation: undefined }),
+      remediationOutcomes: nextOutcomes,
       approvals: [approvalRecord, ...current.approvals],
     },
   };
   saveProgressStore(updated);
-  return { store: updated, passed, nextStepId };
+  return { store: updated, passed, nextStepId, newRemediationOutcome };
 }
 
 export function assignStudentStep(
   store: ProgressMap,
   studentId: string,
-  stepId: string
+  stepId: string,
+  remediationMeta?: { fromTargetStepId: string; lastAccuracy: number }
 ): ProgressMap {
   const current = store[studentId];
   if (!current) return store;
@@ -347,6 +411,15 @@ export function assignStudentStep(
       ...current,
       currentStepId: stepId,
       activeVariantByStep: nextVariantMap,
+      activeRemediation: remediationMeta
+        ? {
+            targetStepId: remediationMeta.fromTargetStepId,
+            remediationStepId: stepId,
+            accuracyBefore: remediationMeta.lastAccuracy,
+            startedAt: new Date().toISOString(),
+            remediationPassed: false,
+          }
+        : current.activeRemediation,
     },
   };
   saveProgressStore(updated);
@@ -410,9 +483,17 @@ export function buildFeedbackExportLog(store: ProgressMap): FeedbackExportLog {
     }
   }
 
+  const allRemediationOutcomes: RemediationOutcomeRecord[] = [];
+  for (const progress of Object.values(store)) {
+    if (progress.remediationOutcomes?.length) {
+      allRemediationOutcomes.push(...progress.remediationOutcomes);
+    }
+  }
+
   return {
     exported_at: new Date().toISOString(),
     source: 'mathstep-web-app',
     steps: Array.from(byStep.values()),
+    remediation_outcomes: allRemediationOutcomes,
   };
 }

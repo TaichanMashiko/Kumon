@@ -23,7 +23,11 @@ interface TeacherDashboardProps {
     accuracyPercent: number,
     comment?: string
   ) => { passed: boolean };
-  onAssignStep: (studentId: string, stepId: string) => void;
+  onAssignStep: (
+    studentId: string,
+    stepId: string,
+    remediationMeta?: { fromTargetStepId: string; lastAccuracy: number }
+  ) => void;
   onToggleSelfStudy: (studentId: string, enabled: boolean) => void;
   onBulkToggleSelfStudy: (enabled: boolean) => void;
   onUpdatePassThreshold: (studentId: string, threshold: number) => void;
@@ -441,9 +445,15 @@ export function TeacherDashboard({
                             key={rem.id}
                             type="button"
                             onClick={() => {
-                              onAssignStep(selectedStudent.id, rem.id);
+                              const latestAttempt = selectedProgress.approvals.find(
+                                (a) => a.stepId === currentSummary.id
+                              );
+                              onAssignStep(selectedStudent.id, rem.id, {
+                                fromTargetStepId: currentSummary.id,
+                                lastAccuracy: latestAttempt?.accuracyPercent ?? accuracyPercent,
+                              });
                               showToast(
-                                `${selectedStudent.name} を戻り学習（${rem.stage}・${rem.title}）に設定しました`
+                                `${selectedStudent.name} を戻り学習（${rem.stage}・${rem.title}）に設定しました（効果測定を開始）`
                               );
                             }}
                             className="flex items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50/60 px-3.5 py-2.5 text-left text-xs transition hover:border-amber-400 hover:bg-amber-50"
@@ -509,6 +519,47 @@ export function TeacherDashboard({
                                 }`}
                               >
                                 {app.passed ? '合格' : '再挑戦'} {app.accuracyPercent}%
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <h3 className="text-xs font-bold text-neutral-500">
+                      戻り学習の相関・効果ログ（週次アップデート用データ）
+                    </h3>
+                    {(selectedProgress.remediationOutcomes?.length ?? 0) === 0 ? (
+                      <p className="mt-2 text-xs text-neutral-400">
+                        まだ戻り学習の効果測定データはありません（戻り学習後に元の単元へ再挑戦すると自動記録されます）。
+                      </p>
+                    ) : (
+                      <div className="mt-2 divide-y divide-neutral-100 rounded-xl border border-neutral-200">
+                        {selectedProgress.remediationOutcomes?.map((rec) => {
+                          const targetS = getStepSummary(rec.targetStepId);
+                          const remS = getStepSummary(rec.remediationStepId);
+                          return (
+                            <div
+                              key={rec.id}
+                              className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-xs"
+                            >
+                              <div>
+                                <span className="font-semibold text-neutral-900">
+                                  {targetS.title}
+                                </span>
+                                <span className="mx-1.5 text-neutral-400">←</span>
+                                <span className="text-neutral-600">{remS.title}</span>
+                              </div>
+                              <span
+                                className={`font-bold ${
+                                  rec.passedAfter ? 'text-emerald-700' : 'text-amber-700'
+                                }`}
+                              >
+                                {rec.accuracyBefore}% → {rec.accuracyAfter}%（
+                                {rec.accuracyGain >= 0 ? `+${rec.accuracyGain}` : rec.accuracyGain}%・
+                                {rec.passedAfter ? '回復合格' : '再検討要'}）
                               </span>
                             </div>
                           );

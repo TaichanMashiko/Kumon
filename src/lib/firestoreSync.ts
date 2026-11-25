@@ -9,6 +9,7 @@ import {
   type Unsubscribe,
 } from 'firebase/firestore';
 import type {
+  RemediationOutcomeRecord,
   StudentProgress,
   UserAccount,
   VariantProblemSet,
@@ -19,6 +20,7 @@ import { DEFAULT_PASS_THRESHOLD, type ProgressMap } from './store';
 const COL_USERS = 'kumon_users';
 const COL_PROGRESS = 'kumon_student_progress';
 const COL_VARIANTS = 'kumon_shared_variants';
+const COL_REMEDIATION_ANALYTICS = 'kumon_remediation_analytics';
 
 export function createDefaultStudentProgress(studentId: string): StudentProgress {
   return {
@@ -166,6 +168,20 @@ export function subscribeTeacherDashboardData(
     unsubUsers();
     unsubProgress();
   };
+}
+
+export async function saveRemediationOutcomeToFirestore(
+  outcome: RemediationOutcomeRecord
+): Promise<void> {
+  if (!isFirebaseConfigured || !db) return;
+  try {
+    await setDoc(
+      doc(db, COL_REMEDIATION_ANALYTICS, outcome.id),
+      stripUndefined(outcome)
+    );
+  } catch (err) {
+    console.error('[Firestore] 戻り学習相関データの保存に失敗しました:', err);
+  }
 }
 
 export async function fetchSharedVariantFromFirestore(
