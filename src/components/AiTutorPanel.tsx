@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bot, Loader2, Send, Sparkles } from 'lucide-react';
+import { Loader2, MessageCircle, Send, X } from 'lucide-react';
 import type { AiChatMessage, StepDocument } from '../types/curriculum';
 import { MarkdownMath } from './MarkdownMath';
 
@@ -9,17 +9,17 @@ interface AiTutorPanelProps {
 }
 
 const QUICK_PROMPTS = [
-  'この単元のポイントを小学生でもわかるように教えて',
-  '1問目の最初のヒントだけ教えて',
-  '途中式の変形がなぜそうなるか教えて',
+  'この単元のポイントをわかりやすく教えて',
+  '1問目のヒントだけ教えて',
+  '途中の式変形がわからない',
 ];
 
 export function AiTutorPanel({ step, onLogConfusionNote }: AiTutorPanelProps) {
+  const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<AiChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [autoSaveNote, setAutoSaveNote] = useState(true);
 
   const askQuestion = async (questionText: string) => {
     const trimmed = questionText.trim();
@@ -32,14 +32,13 @@ export function AiTutorPanel({ step, onLogConfusionNote }: AiTutorPanelProps) {
       createdAt: new Date().toISOString(),
     };
 
-    const nextHistory = [...messages, studentMsg];
-    setMessages(nextHistory);
+    setMessages((prev) => [...prev, studentMsg]);
     setInput('');
     setError(null);
     setLoading(true);
 
-    if (autoSaveNote && onLogConfusionNote) {
-      onLogConfusionNote(`[AI質問] ${trimmed}`);
+    if (onLogConfusionNote) {
+      onLogConfusionNote(`[質問] ${trimmed}`);
     }
 
     try {
@@ -58,7 +57,7 @@ export function AiTutorPanel({ step, onLogConfusionNote }: AiTutorPanelProps) {
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data.error || `AI質問APIエラー (HTTP ${res.status})`);
+        throw new Error(data.error || '回答の取得に失敗しました。');
       }
 
       const tutorMsg: AiChatMessage = {
@@ -72,7 +71,7 @@ export function AiTutorPanel({ step, onLogConfusionNote }: AiTutorPanelProps) {
       setError(
         err instanceof Error
           ? err.message
-          : 'AI先生への接続に失敗しました。Vercelの GEMINI_API_KEY 設定を確認してください。'
+          : '通信エラーが発生しました。もう一度お試しください。'
       );
     } finally {
       setLoading(false);
@@ -80,120 +79,127 @@ export function AiTutorPanel({ step, onLogConfusionNote }: AiTutorPanelProps) {
   };
 
   return (
-    <section className="rounded-2xl border border-indigo-200 bg-white p-5 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-indigo-100 pb-3">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white">
-            <Bot className="h-4 w-4" />
-          </div>
-          <div>
-            <h3 className="flex items-center gap-1.5 text-sm font-bold text-slate-900">
-              AI先生に質問する
-              <span className="inline-flex items-center gap-0.5 rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700">
-                <Sparkles className="h-2.5 w-2.5" />
-                AIチューター
-              </span>
-            </h3>
-            <p className="text-[11px] text-slate-500">
-              わからない場所を聞くと、答えを丸投げせずスモールステップのヒントで導きます。
-            </p>
-          </div>
-        </div>
+    <>
+      {/* Floating Action Button */}
+      {!open && (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="fixed right-6 bottom-6 z-40 inline-flex items-center gap-2 rounded-full bg-neutral-900 px-5 py-3 text-xs font-semibold text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] transition hover:bg-neutral-800 active:scale-[0.98]"
+        >
+          <MessageCircle className="h-4 w-4" />
+          <span>AIに質問する</span>
+        </button>
+      )}
 
-        <label className="flex cursor-pointer items-center gap-1.5 text-[11px] text-slate-600">
-          <input
-            type="checkbox"
-            checked={autoSaveNote}
-            onChange={(e) => setAutoSaveNote(e.target.checked)}
-            className="rounded accent-indigo-600"
-          />
-          質問を躓きメモにも記録
-        </label>
-      </div>
-
-      {/* Quick Prompts */}
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {QUICK_PROMPTS.map((q) => (
-          <button
-            key={q}
-            type="button"
-            disabled={loading}
-            onClick={() => askQuestion(q)}
-            className="rounded-full border border-indigo-200 bg-indigo-50/50 px-3 py-1 text-[11px] font-medium text-indigo-800 transition hover:bg-indigo-100 disabled:opacity-50"
+      {/* Slide-over Drawer */}
+      {open && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/20 backdrop-blur-[1px]">
+          <div
+            className="flex h-full w-full max-w-md flex-col bg-white shadow-2xl"
+            role="dialog"
+            aria-label="AIに質問する"
           >
-            {q}
-          </button>
-        ))}
-      </div>
-
-      {/* Chat History */}
-      {messages.length > 0 && (
-        <div className="mt-4 max-h-80 space-y-3 overflow-y-auto rounded-xl bg-slate-50 p-3">
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`rounded-xl p-3 text-sm ${
-                msg.role === 'student'
-                  ? 'ml-8 bg-indigo-600 text-white'
-                  : 'mr-4 border border-slate-200 bg-white text-slate-800'
-              }`}
-            >
-              <div
-                className={`mb-1 text-[10px] font-bold ${
-                  msg.role === 'student' ? 'text-indigo-200' : 'text-indigo-600'
-                }`}
-              >
-                {msg.role === 'student' ? 'あなたの質問' : 'AI先生（ヒント）'}
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-4">
+              <div>
+                <h2 className="text-sm font-bold text-neutral-900">AIに質問する</h2>
+                <p className="mt-0.5 text-[11px] text-neutral-500">
+                  {step.frontmatter.title}
+                </p>
               </div>
-              {msg.role === 'student' ? (
-                <p className="whitespace-pre-wrap text-xs">{msg.text}</p>
-              ) : (
-                <div className="text-xs">
-                  <MarkdownMath content={msg.text} />
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="rounded-lg p-1.5 text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-700"
+                aria-label="閉じる"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
+              {messages.length === 0 && (
+                <div className="space-y-3 pt-4">
+                  <p className="text-xs leading-relaxed text-neutral-500">
+                    わからない箇所を入力してください。解き方のヒントを段階的にお伝えします。
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    {QUICK_PROMPTS.map((q) => (
+                      <button
+                        key={q}
+                        type="button"
+                        disabled={loading}
+                        onClick={() => askQuestion(q)}
+                        className="rounded-xl border border-neutral-200 px-3.5 py-2.5 text-left text-xs font-medium text-neutral-700 transition hover:border-neutral-400 hover:bg-neutral-50"
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {messages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`rounded-2xl px-4 py-3 text-xs leading-relaxed ${
+                    msg.role === 'student'
+                      ? 'ml-10 bg-neutral-900 text-white'
+                      : 'mr-6 border border-neutral-200 bg-neutral-50 text-neutral-800'
+                  }`}
+                >
+                  {msg.role === 'student' ? (
+                    <p className="whitespace-pre-wrap">{msg.text}</p>
+                  ) : (
+                    <MarkdownMath content={msg.text} />
+                  )}
+                </div>
+              ))}
+
+              {loading && (
+                <div className="flex items-center gap-2 text-xs text-neutral-500">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>考えています...</span>
+                </div>
+              )}
+
+              {error && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs text-red-700">
+                  {error}
                 </div>
               )}
             </div>
-          ))}
-          {loading && (
-            <div className="flex items-center gap-2 text-xs text-indigo-600">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              AI先生がヒントを考えています...
-            </div>
-          )}
+
+            {/* Input */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                askQuestion(input);
+              }}
+              className="flex items-center gap-2 border-t border-neutral-200 p-4"
+            >
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="質問を入力..."
+                disabled={loading}
+                className="flex-1 rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-xs text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-900 focus:bg-white focus:outline-none"
+              />
+              <button
+                type="submit"
+                disabled={loading || !input.trim()}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-neutral-900 text-white transition hover:bg-neutral-800 disabled:opacity-40"
+                aria-label="送信"
+              >
+                <Send className="h-3.5 w-3.5" />
+              </button>
+            </form>
+          </div>
         </div>
       )}
-
-      {error && (
-        <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
-          {error}
-        </div>
-      )}
-
-      {/* Input Form */}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          askQuestion(input);
-        }}
-        className="mt-3 flex gap-2"
-      >
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="例：なぜ 2x dx が dt に変わるの？"
-          disabled={loading}
-          className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:outline-none"
-        />
-        <button
-          type="submit"
-          disabled={loading || !input.trim()}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <Send className="h-3.5 w-3.5" />
-          質問する
-        </button>
-      </form>
-    </section>
+    </>
   );
 }

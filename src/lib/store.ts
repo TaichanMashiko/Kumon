@@ -333,6 +333,27 @@ export function submitStepAttempt(
   return { store: updated, passed, nextStepId };
 }
 
+export function assignStudentStep(
+  store: ProgressMap,
+  studentId: string,
+  stepId: string
+): ProgressMap {
+  const current = store[studentId];
+  if (!current) return store;
+  const nextVariantMap = { ...current.activeVariantByStep };
+  delete nextVariantMap[stepId];
+  const updated: ProgressMap = {
+    ...store,
+    [studentId]: {
+      ...current,
+      currentStepId: stepId,
+      activeVariantByStep: nextVariantMap,
+    },
+  };
+  saveProgressStore(updated);
+  return updated;
+}
+
 export function setActiveVariantForStep(
   store: ProgressMap,
   studentId: string,

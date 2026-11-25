@@ -25,6 +25,7 @@ import {
   subscribeTeacherDashboardData,
 } from './lib/firestoreSync';
 import {
+  assignStudentStep,
   loadProgressStore,
   recordClarityRating,
   recordConfusionNote,
@@ -204,9 +205,14 @@ export default function App() {
       ? progressStore[user.id] ?? createDefaultStudentProgress(user.id)
       : null;
 
+  const currentStepTitle =
+    user.role === 'student' && currentStudentProgress
+      ? stepsById[currentStudentProgress.currentStepId]?.frontmatter.title
+      : '教員管理';
+
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar user={user} onLogout={handleLogout} />
+    <div className="min-h-screen bg-[#F7F8FA]">
+      <Navbar user={user} stepSubtitle={currentStepTitle} onLogout={handleLogout} />
 
       {user.role === 'student' && currentStudentProgress ? (
         <StudentDashboard
@@ -285,6 +291,13 @@ export default function App() {
             setProgressStore(result.store);
             persistIfFirebase(result.store[studentId]);
             return { passed: result.passed };
+          }}
+          onAssignStep={(studentId, stepId) => {
+            setProgressStore((prev) => {
+              const next = assignStudentStep(prev, studentId, stepId);
+              persistIfFirebase(next[studentId]);
+              return next;
+            });
           }}
           onToggleSelfStudy={(studentId, enabled) => {
             setProgressStore((prev) => {
