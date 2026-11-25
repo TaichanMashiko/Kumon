@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { FeedbackModal } from './components/FeedbackModal';
 import { LoginView } from './components/LoginView';
 import { Navbar } from './components/Navbar';
 import { RoleSetupView, type RoleSetupPayload } from './components/RoleSetupView';
@@ -62,6 +63,7 @@ export default function App() {
   const [variantPool, setVariantPool] = useState<VariantProblemSet[]>(() =>
     loadSharedVariantPool()
   );
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   // Subscribe to Firebase Auth state
   useEffect(() => {
@@ -204,7 +206,21 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#F4F6F4]">
-      <Navbar user={user} stepSubtitle={currentStepTitle} onLogout={handleLogout} />
+      <Navbar
+        user={user}
+        stepSubtitle={currentStepTitle}
+        onOpenFeedback={() => setFeedbackOpen(true)}
+        onLogout={handleLogout}
+      />
+
+      {feedbackOpen && (
+        <FeedbackModal
+          user={user}
+          currentStepId={currentStudentProgress?.currentStepId}
+          currentStepTitle={currentStepTitle}
+          onClose={() => setFeedbackOpen(false)}
+        />
+      )}
 
       {user.role === 'student' && currentStudentProgress ? (
         <StudentDashboard

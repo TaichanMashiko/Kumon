@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "patch": "node scripts/patch-curriculum.mjs",
     "patch:dry-run": "node scripts/patch-curriculum.mjs --dry-run",
+    "audit:curriculum": "node scripts/audit-curriculum.mjs",
     "evolve:weekly": "node scripts/weekly-curriculum-evolution.mjs"
   },
   "dependencies": {

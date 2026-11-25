@@ -1,13 +1,19 @@
-import { BookOpen, LogOut } from 'lucide-react';
+import { BookOpen, LogOut, MessageSquarePlus } from 'lucide-react';
 import type { UserAccount } from '../types/curriculum';
 
 interface NavbarProps {
   user: UserAccount;
   stepSubtitle?: string;
+  onOpenFeedback?: () => void;
   onLogout: () => void;
 }
 
-export function Navbar({ user, stepSubtitle, onLogout }: NavbarProps) {
+export function Navbar({
+  user,
+  stepSubtitle,
+  onOpenFeedback,
+  onLogout,
+}: NavbarProps) {
   return (
     <header className="sticky top-0 z-30 border-b border-teal-900/10 bg-white/95 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-6">
@@ -28,7 +34,17 @@ export function Navbar({ user, stepSubtitle, onLogout }: NavbarProps) {
           )}
         </div>
 
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          {onOpenFeedback && (
+            <button
+              type="button"
+              onClick={onOpenFeedback}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:border-teal-400 hover:text-teal-800"
+            >
+              <MessageSquarePlus className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">ご意見・報告</span>
+            </button>
+          )}
           <div className="hidden items-center gap-2 sm:flex">
             <span className="text-xs font-semibold text-slate-700">{user.name}</span>
             <span className="rounded-full bg-teal-50 px-2.5 py-0.5 text-[11px] font-semibold text-teal-800">

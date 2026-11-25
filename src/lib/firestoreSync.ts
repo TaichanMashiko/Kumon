@@ -21,6 +21,39 @@ const COL_USERS = 'kumon_users';
 const COL_PROGRESS = 'kumon_student_progress';
 const COL_VARIANTS = 'kumon_shared_variants';
 const COL_REMEDIATION_ANALYTICS = 'kumon_remediation_analytics';
+const COL_APP_FEEDBACK = 'kumon_app_feedback';
+
+export interface AppFeedbackRecord {
+  id: string;
+  userId: string;
+  userRole: string;
+  category: string;
+  message: string;
+  stepId: string;
+  stepTitle: string;
+  createdAt: string;
+  status: 'open' | 'resolved';
+}
+
+export async function saveAppFeedbackToFirestore(
+  feedback: AppFeedbackRecord
+): Promise<void> {
+  try {
+    const localKey = 'mathstep_app_feedback_v1';
+    const existing = JSON.parse(localStorage.getItem(localKey) || '[]');
+    existing.unshift(feedback);
+    localStorage.setItem(localKey, JSON.stringify(existing.slice(0, 100)));
+  } catch {
+    // Ignore local storage errors
+  }
+
+  if (!isFirebaseConfigured || !db) return;
+  try {
+    await setDoc(doc(db, COL_APP_FEEDBACK, feedback.id), stripUndefined(feedback));
+  } catch (err) {
+    console.error('[Firestore] フィードバックの保存に失敗しました:', err);
+  }
+}
 
 export function createDefaultStudentProgress(studentId: string): StudentProgress {
   return {

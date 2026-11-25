@@ -622,6 +622,358 @@ export function getWorkedExampleForSpec(spec: MicroStepSpec): WorkedExample {
         answer: '$\\pi$',
       };
 
+    case 'hs1_stats':
+      return {
+        problem: 'データ $2, 4, 6, 8, 10$ の平均値と分散',
+        steps: [
+          '平均値を求めます：$\\bar{x} = \\frac{2+4+6+8+10}{5} = 6$',
+          '各値と平均値の差（偏差）を2乗します：$(-4)^2, (-2)^2, 0^2, 2^2, 4^2 = 16, 4, 0, 4, 16$',
+          '偏差の2乗の平均が分散です：$s^2 = \\frac{16+4+0+4+16}{5} = 8$',
+        ],
+        answer: '平均値 $6$、分散 $8$',
+      };
+
+    case 'hs_comb_perm':
+      if (params.mode === 'C') {
+        return {
+          problem: '$_6\\mathrm{C}_2$ を計算せよ。',
+          steps: [
+            '組合せの公式 $_n\\mathrm{C}_r = \\frac{_n\\mathrm{P}_r}{r!}$ に当てはめます。',
+            '$\\displaystyle \\frac{6 \\times 5}{2 \\times 1} = 15$',
+          ],
+          answer: '$15$',
+        };
+      }
+      return {
+        problem: '$_5\\mathrm{P}_3$ を計算せよ。',
+        steps: [
+          '$5$ から始めて $1$ ずつ減らしながら $3$ 個かけます。',
+          '$5 \\times 4 \\times 3 = 60$',
+        ],
+        answer: '$60$',
+      };
+
+    case 'hsa_prob_events':
+      if (params.mode === 'complement') {
+        return {
+          problem: '硬貨を3回投げるとき、少なくとも1回は表が出る確率',
+          steps: [
+            '余事象「3回とも裏が出る確率」を求めます：$\\left(\\frac{1}{2}\\right)^3 = \\frac{1}{8}$',
+            '$1$ から引きます：$1 - \\frac{1}{8} = \\frac{7}{8}$',
+          ],
+          answer: '$\\displaystyle \\frac{7}{8}$',
+        };
+      }
+      return {
+        problem: '硬貨を4回投げるとき、表がちょうど2回出る確率',
+        steps: [
+          '表が出る2回の選び方は $_4\\mathrm{C}_2 = 6$ 通り。',
+          '反復試行の公式より $_4\\mathrm{C}_2 \\left(\\frac{1}{2}\\right)^2 \\left(\\frac{1}{2}\\right)^2 = 6 \\times \\frac{1}{16} = \\frac{3}{8}$',
+        ],
+        answer: '$\\displaystyle \\frac{3}{8}$',
+      };
+
+    case 'hsa_geom_theorems':
+      if (params.mode === 'power') {
+        return {
+          problem: '弦 $\\mathrm{AB, CD}$ の交点 $\\mathrm{P}$ で $\\mathrm{PA}=3, \\mathrm{PB}=4, \\mathrm{PC}=2$ のとき $\\mathrm{PD}$',
+          steps: [
+            '方べきの定理より $\\mathrm{PA} \\cdot \\mathrm{PB} = \\mathrm{PC} \\cdot \\mathrm{PD}$',
+            '$3 \\times 4 = 2 \\times \\mathrm{PD} \\implies 12 = 2\\mathrm{PD} \\implies \\mathrm{PD} = 6$',
+          ],
+          answer: '$\\mathrm{PD} = 6$',
+        };
+      }
+      return {
+        problem: '$\\mathrm{AB}=6, \\mathrm{AC}=4, \\mathrm{BC}=5$ で $\\angle\\mathrm{A}$ の二等分線と $\\mathrm{BC}$ の交点 $\\mathrm{D}$ のとき $\\mathrm{BD}$',
+        steps: [
+          '角の二等分線の性質より $\\mathrm{BD} : \\mathrm{DC} = \\mathrm{AB} : \\mathrm{AC} = 6 : 4 = 3 : 2$',
+          '$\\mathrm{BD} = 5 \\times \\frac{3}{3+2} = 3$',
+        ],
+        answer: '$\\mathrm{BD} = 3$',
+      };
+
+    case 'hsa_int_diophantine':
+      if (params.mode === 'base') {
+        return {
+          problem: '10進法の $13$ を2進法で表せ。',
+          steps: [
+            '$13 \\div 2 = 6$ あまり $1$、$6 \\div 2 = 3$ あまり $0$、$3 \\div 2 = 1$ あまり $1$、$1 \\div 2 = 0$ あまり $1$',
+            '余りを下から順に並べると $1101_{(2)}$ です。',
+          ],
+          answer: '$1101_{(2)}$',
+        };
+      }
+      return {
+        problem: '$72$ の正の約数の個数を求めよ。',
+        steps: [
+          '素因数分解します：$72 = 2^3 \\times 3^2$',
+          '各指数に $1$ を足して掛けます：$(3+1)(2+1) = 4 \\times 3 = 12$',
+        ],
+        answer: '$12$ 個',
+      };
+
+    case 'hs_complex':
+      return {
+        problem: '$(2 + 3i)(1 - 2i)$ を計算せよ。',
+        steps: [
+          '多項式と同じように展開します：$2 - 4i + 3i - 6i^2$',
+          '$i^2 = -1$ を代入します：$2 - i - 6(-1) = 2 - i + 6 = 8 - i$',
+        ],
+        answer: '$8 - i$',
+      };
+
+    case 'hs2_remainder_cubic':
+      return {
+        problem: '$P(x) = x^3 - 2x^2 + 3x - 1$ を $x - 2$ で割った余り',
+        steps: [
+          '剰余の定理より、$x - 2 = 0$ となる $x = 2$ を $P(x)$ に代入します。',
+          '$P(2) = 2^3 - 2(2^2) + 3(2) - 1 = 8 - 8 + 6 - 1 = 5$',
+        ],
+        answer: '$5$',
+      };
+
+    case 'hs2_trig_add':
+      return {
+        problem: '$\\sin\\theta + \\sqrt{3}\\cos\\theta$ の合成',
+        steps: [
+          '係数 $(1, \\sqrt{3})$ より $r = \\sqrt{1^2 + (\\sqrt{3})^2} = 2$。',
+          '$\\cos\\alpha = \\frac{1}{2}, \\ \\sin\\alpha = \\frac{\\sqrt{3}}{2}$ より $\\alpha = \\frac{\\pi}{3}$。',
+        ],
+        answer: '$\\displaystyle 2\\sin\\left(\\theta + \\frac{\\pi}{3}\\right)$',
+      };
+
+    case 'hs2_exp_log_eq':
+      if (params.mode === 'log') {
+        return {
+          problem: '$\\log_2(x - 1) = 3$ を解け。',
+          steps: [
+            '真数条件より $x - 1 > 0 \\iff x > 1$。',
+            '対数の定義より $x - 1 = 2^3 = 8 \\implies x = 9$（$x > 1$ を満たす）。',
+          ],
+          answer: '$x = 9$',
+        };
+      }
+      return {
+        problem: '$2^{x+1} = 16$ を解け。',
+        steps: [
+          '右辺を底 $2$ で表します：$16 = 2^4$',
+          '指数を比較します：$x + 1 = 4 \\implies x = 3$',
+        ],
+        answer: '$x = 3$',
+      };
+
+    case 'hs2_def_int_area':
+      return {
+        problem: '放物線 $y = x^2 - 3x + 2$ と $x$ 軸で囲まれた面積 $S$',
+        steps: [
+          '交点を求めます：$(x-1)(x-2)=0 \\implies x = 1, 2$。',
+          '$\\frac{1}{6}$公式より $S = \\frac{1}{6}(2 - 1)^3 = \\frac{1}{6}$',
+        ],
+        answer: '$\\displaystyle \\frac{1}{6}$',
+      };
+
+    case 'hs_seq':
+      if (params.kind === 'geom') {
+        return {
+          problem: '初項 $2$、公比 $3$ の等比数列の第 $4$ 項',
+          steps: [
+            '等比数列の一般項 $a_n = a_1 r^{n-1}$ に $a_1=2, r=3, n=4$ を代入します。',
+            '$a_4 = 2 \\times 3^{4-1} = 2 \\times 27 = 54$',
+          ],
+          answer: '$54$',
+        };
+      }
+      return {
+        problem: '初項 $3$、公差 $4$ の等差数列の第 $6$ 項',
+        steps: [
+          '等差数列の一般項 $a_n = a_1 + (n-1)d$ に代入します。',
+          '$a_6 = 3 + (6-1) \\times 4 = 3 + 20 = 23$',
+        ],
+        answer: '$23$',
+      };
+
+    case 'hsb_sigma_diff':
+      return {
+        problem: '$\\displaystyle \\sum_{k=1}^{5} (2k + 1)$ を計算せよ。',
+        steps: [
+          '$\\sum$ を分けます：$2\\sum_{k=1}^5 k + \\sum_{k=1}^5 1$',
+          '$2 \\cdot \\frac{5 \\cdot 6}{2} + 5 = 30 + 5 = 35$',
+        ],
+        answer: '$35$',
+      };
+
+    case 'hsb_binomial_dist':
+      return {
+        problem: '二項分布 $B\\left(30, \\frac{1}{3}\\right)$ の期待値と分散',
+        steps: [
+          '期待値：$E(X) = np = 30 \\times \\frac{1}{3} = 10$',
+          '分散：$V(X) = np(1-p) = 10 \\times \\frac{2}{3} = \\frac{20}{3}$',
+        ],
+        answer: '$E(X) = 10, \\ V(X) = \\frac{20}{3}$',
+      };
+
+    case 'hs_vector':
+      return {
+        problem: '$\\vec{a}=(2, -3), \\ \\vec{b}=(4, 1)$ の内積',
+        steps: [
+          '成分ごとの積をたします：$\\vec{a}\\cdot\\vec{b} = 2 \\times 4 + (-3) \\times 1$',
+          '$8 - 3 = 5$',
+        ],
+        answer: '$5$',
+      };
+
+    case 'hsc_vec_angle_perp':
+      return {
+        problem: '$\\vec{a}=(2, 3), \\ \\vec{b}=(x, 4)$ が垂直となる $x$ の値',
+        steps: [
+          '垂直条件より $\\vec{a}\\cdot\\vec{b} = 0$：$2x + 3 \\times 4 = 0$',
+          '$2x = -12 \\implies x = -6$',
+        ],
+        answer: '$x = -6$',
+      };
+
+    case 'hsc_conics':
+      if (params.mode === 'ellipse') {
+        return {
+          problem: '楕円 $\\frac{x^2}{25} + \\frac{y^2}{9} = 1$ の焦点',
+          steps: [
+            '$a^2 = 25, \\ b^2 = 9$ より $c = \\sqrt{a^2 - b^2} = \\sqrt{25 - 9} = 4$',
+            '焦点は $x$ 軸上に $(\\pm 4, 0)$ です。',
+          ],
+          answer: '$(\\pm 4, 0)$',
+        };
+      }
+      return {
+        problem: '放物線 $y^2 = 12x$ の焦点と準線',
+        steps: [
+          '$y^2 = 4px$ と比較して $4p = 12 \\implies p = 3$。',
+          'よって焦点 $(3, 0)$、準線 $x = -3$ です。',
+        ],
+        answer: '焦点 $(3, 0)$、準線 $x = -3$',
+      };
+
+    case 'hsc_complex_polar':
+      return {
+        problem: '$z = 1 + \\sqrt{3}i$ を極形式で表せ。',
+        steps: [
+          '絶対値 $r = \\sqrt{1^2 + (\\sqrt{3})^2} = 2$。',
+          '$z = 2\\left(\\frac{1}{2} + \\frac{\\sqrt{3}}{2}i\\right)$ より偏角 $\\theta = \\frac{\\pi}{3}$。',
+        ],
+        answer: '$\\displaystyle 2\\left(\\cos\\frac{\\pi}{3} + i\\sin\\frac{\\pi}{3}\\right)$',
+      };
+
+    case 'hs3_limits':
+      if (params.mode === 'series') {
+        return {
+          problem: '初項 $3$、公比 $\\frac{1}{2}$ の無限等比級数の和',
+          steps: [
+            '$|r| = \\frac{1}{2} < 1$ なので収束します。',
+            '公式 $\\frac{a}{1-r} = \\frac{3}{1 - 1/2} = 6$',
+          ],
+          answer: '$6$',
+        };
+      }
+      if (params.mode === 'trig') {
+        return {
+          problem: '$\\displaystyle \\lim_{x \\to 0} \\frac{\\sin 3x}{2x}$',
+          steps: [
+            '$\\displaystyle \\frac{\\sin 3x}{3x} \\cdot \\frac{3}{2}$ と変形します。',
+            '$x \\to 0$ のとき $\\frac{\\sin 3x}{3x} \\to 1$ より $\\frac{3}{2}$。',
+          ],
+          answer: '$\\displaystyle \\frac{3}{2}$',
+        };
+      }
+      return {
+        problem: '$\\displaystyle \\lim_{n \\to \\infty} \\frac{3n^2 + 2n + 1}{2n^2 - n + 5}$',
+        steps: [
+          '分母・分子を $n^2$ で割ります：$\\displaystyle \\frac{3 + \\frac{2}{n} + \\frac{1}{n^2}}{2 - \\frac{1}{n} + \\frac{5}{n^2}}$',
+          '$n \\to \\infty$ で $\\frac{1}{n} \\to 0$ より $\\frac{3}{2}$。',
+        ],
+        answer: '$\\displaystyle \\frac{3}{2}$',
+      };
+
+    case 'hs3_diff_adv':
+      return {
+        problem: '$y = x e^{2x}$ を微分せよ。',
+        steps: [
+          '積の微分公式 $(fg)\' = f\'g + fg\'$ より $y\' = (x)\'e^{2x} + x(e^{2x})\'$',
+          '$(e^{2x})\' = 2e^{2x}$ なので $y\' = e^{2x} + 2xe^{2x} = (1 + 2x)e^{2x}$',
+        ],
+        answer: '$y\' = (1 + 2x)e^{2x}$',
+      };
+
+    case 'hs3_int_volume':
+      return {
+        problem: '$y = \\sqrt{x} \\ (0 \\le x \\le 2)$ を $x$ 軸まわりに1回転した体積 $V$',
+        steps: [
+          '公式 $V = \\pi \\int_0^2 (\\sqrt{x})^2 \\, dx = \\pi \\int_0^2 x \\, dx$',
+          '$\\displaystyle \\pi \\left[\\frac{1}{2}x^2\\right]_0^2 = 2\\pi$',
+        ],
+        answer: '$2\\pi$',
+      };
+
+    case 'univ_const_sep':
+      return {
+        problem: '$x^3 - 3x - k = 0$ が異なる3実数解をもつ $k$ の範囲',
+        steps: [
+          '定数分離します：$k = x^3 - 3x$。右辺を $f(x)$ とおきます。',
+          '$f\'(x) = 3(x+1)(x-1)$ より、極大値 $f(-1) = 2$、極小値 $f(1) = -2$。',
+          '直線 $y = k$ が曲線と3点で交わる範囲は $-2 < k < 2$。',
+        ],
+        answer: '$-2 < k < 2$',
+      };
+
+    case 'univ_seq_sn_an':
+      return {
+        problem: '$S_n = n^2 + 2n$ のとき一般項 $a_n$',
+        steps: [
+          '$n \\ge 2$ で $a_n = S_n - S_{n-1} = (n^2+2n) - \\{(n-1)^2+2(n-1)\\} = 2n + 1$',
+          '$n = 1$ のとき $a_1 = S_1 = 3$。$2(1)+1 = 3$ より $n=1$ でも成り立ちます。',
+        ],
+        answer: '$a_n = 2n + 1$',
+      };
+
+    case 'univ_space_vec':
+      return {
+        problem: '$\\mathrm{A}(1, 2, 2), \\ \\mathrm{B}(2, 0, 2)$ のとき $\\overrightarrow{\\mathrm{OA}}\\cdot\\overrightarrow{\\mathrm{OB}}$ と $|\\overrightarrow{\\mathrm{OA}}|^2$',
+        steps: [
+          '内積：$1\\cdot 2 + 2\\cdot 0 + 2\\cdot 2 = 6$',
+          '大きさの2乗：$1^2 + 2^2 + 2^2 = 9$',
+        ],
+        answer: '内積 $6$、$|\\overrightarrow{\\mathrm{OA}}|^2 = 9$',
+      };
+
+    case 'univ_complex_rot':
+      return {
+        problem: '$z = 2 + 3i$ を原点まわりに $\\frac{\\pi}{2}$ 回転した点 $w$',
+        steps: [
+          '$\\frac{\\pi}{2}$ 回転は $\\cos\\frac{\\pi}{2} + i\\sin\\frac{\\pi}{2} = i$ を掛けます。',
+          '$w = i(2 + 3i) = 2i + 3i^2 = -3 + 2i$',
+        ],
+        answer: '$w = -3 + 2i$',
+      };
+
+    case 'univ_riemann_sum':
+      return {
+        problem: '$\\displaystyle \\lim_{n \\to \\infty} \\frac{1}{n} \\sum_{k=1}^{n} \\left(\\frac{k}{n}\\right)^2$',
+        steps: [
+          '区分求積法の公式 $\\lim_{n\\to\\infty}\\frac{1}{n}\\sum_{k=1}^n f\\left(\\frac{k}{n}\\right) = \\int_0^1 f(x)\\,dx$ を適用します。',
+          '$\\displaystyle \\int_0^1 x^2 \\, dx = \\left[\\frac{1}{3}x^3\\right]_0^1 = \\frac{1}{3}$',
+        ],
+        answer: '$\\displaystyle \\frac{1}{3}$',
+      };
+
+    case 'univ_prob_recurrence':
+      return {
+        problem: 'さいころを $n$ 回投げて目の和が偶数になる確率 $p_n$',
+        steps: [
+          '$p_1 = \\frac{1}{2}$。$n$ 回目が偶数($p_n$)なら次は偶数($\\frac{1}{2}$)、奇数($1-p_n$)なら次は奇数($\\frac{1}{2}$)が出ればよい。',
+          '$p_{n+1} = \\frac{1}{2}p_n + \\frac{1}{2}(1 - p_n) = \\frac{1}{2}$',
+        ],
+        answer: '$p_n = \\frac{1}{2}$',
+      };
+
     default:
       return {
         problem: 'このレベルの標準例題',

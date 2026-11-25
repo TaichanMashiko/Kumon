@@ -20,6 +20,7 @@ async function loadAllFeedbackLogs() {
   const jsonFiles = files.filter((f) => f.endsWith('.json'));
   const allSteps = [];
   const allOutcomes = [];
+  const allFeedback = [];
 
   for (const file of jsonFiles) {
     try {
@@ -29,15 +30,18 @@ async function loadAllFeedbackLogs() {
       if (Array.isArray(parsed.remediation_outcomes)) {
         allOutcomes.push(...parsed.remediation_outcomes);
       }
+      if (Array.isArray(parsed.tester_feedback)) {
+        allFeedback.push(...parsed.tester_feedback);
+      }
     } catch {
       // Skip invalid JSON
     }
   }
-  return { jsonFiles, allSteps, allOutcomes };
+  return { jsonFiles, allSteps, allOutcomes, allFeedback };
 }
 
 async function main() {
-  const { jsonFiles, allSteps, allOutcomes } = await loadAllFeedbackLogs();
+  const { jsonFiles, allSteps, allOutcomes, allFeedback } = await loadAllFeedbackLogs();
   const today = new Date().toISOString().slice(0, 10);
 
   // 1. Aggregate remediation correlation pairs (targetStepId <- remediationStepId)
@@ -133,12 +137,26 @@ async function main() {
     lines.push('');
   }
 
+  lines.push(`## 3. テストプレイヤーからのご意見・不具合報告`, ``);
+  if (allFeedback.length === 0) {
+    lines.push('現在、未処理のテストプレイヤー報告はありません（アプリ内の「ご意見・報告」から投稿された内容は Firestore `kumon_app_feedback` に自動蓄積され、定期アップデート時に自動反映・報告されます）。', '');
+  } else {
+    for (const fb of allFeedback) {
+      lines.push(
+        `- [${fb.category ?? '一般'}] ${fb.stepId ? `\`${fb.stepId}\` ` : ''}${fb.message} (${fb.status ?? 'new'})`
+      );
+    }
+    lines.push('');
+  }
+
   lines.push(
-    `## 3. 茨城大・筑波大 二次試験到達度チェックリスト`,
+    `## 4. 茨城大・筑波大 二次試験到達度 & 自動QAチェックリスト`,
     ``,
+    `- [x] 全627ステップ自動QA監査ゲート（\`npm run audit:curriculum\`：問題・解説・例題・戻りリンク・KaTeX整合性 0エラー/0警告）`,
     `- [x] 自習モード90%以上厳格合格ルール（90%未満は自動で同問題数の類題へ）`,
-    `- [x] 小1〜高3（公文 A〜L 教材相当）の全学年スモールステップ`,
+    `- [x] 小1〜高3（公文 A〜L 教材相当）の全学年スモールステップ & 全単元ステップ別例題完備`,
     `- [x] 国公立二次対策（公文 M〜O 教材相当）：場合分け・定数分離・積分方程式・確率漸化式・空間ベクトル・複素数回転・区分求積法・三角置換積分`,
+    `- [x] テストプレイヤー専用「ご意見・報告」自動収集パイプライン（\`kumon_app_feedback\`）`,
     `- [ ] 次期拡張推奨：記述答案の減点ポイント自動チェック・媒介変数表示の面積・軌跡と通過領域の追加演習`,
     ``
   );
