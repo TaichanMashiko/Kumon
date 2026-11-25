@@ -1,69 +1,18 @@
 // Vercel Serverless Function: POST /api/ask-gemini
 // 生徒が今開いているステップ・類題番号・全問題文・解説を正確に受け取り、Gemini でヒント回答を返す
 
-const RETRYABLE_STATUS = new Set([404, 429, 500, 502, 503, 504]);
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function callGeminiWithFallback(apiKey, payload) {
-  const candidates = Array.from(
-    new Set([
-      process.env.GEMINI_MODEL || 'gemini-3.8-flash',
-      'gemini-3.8-flash',
-      'gemini-2.5-flash',
-      'gemini-2.5-flash-lite',
-      'gemini-2.0-flash',
-    ])
-  );
-
-  let lastStatus = 502;
-  let lastErr = '';
-
-  for (const model of candidates) {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
-    const maxAttempts = model === candidates[0] ? 2 : 1;
-
-    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        return { ok: true, data, model };
-      }
-
-      lastStatus = res.status;
-      lastErr = await res.text();
-
-      // 一時的な混雑(503/429)は短く待って再試行し、それでもダメなら次のモデルへ自動フォールバック
-      if ((res.status === 503 || res.status === 429) && attempt < maxAttempts) {
-        await sleep(700);
-        continue;
-      }
-      if (!RETRYABLE_STATUS.has(res.status)) {
-        return { ok: false, status: lastStatus, errorText: lastErr };
-      }
-      break;
-    }
-  }
-
-  return { ok: false, status: lastStatus, errorText: lastErr };
-}
+import {
+  callGeminiRobust,
+  extractGeminiText,
+  getGeminiApiKey,
+} from './_gemini.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const apiKey =
-    process.env.GEMINI_API_KEY ||
-    process.env.GOOGLE_API_KEY ||
-    process.env.API_KEY;
+  const apiKey = getGeminiApiKey();
   if (!apiKey) {
     return res.status(503).json({
       error:
@@ -98,8 +47,8 @@ export default async function handler(req, res) {
       'あなたは公文式デジタル数学学習システム「マスステップ」の専属AI数学先生です。',
       '生徒が今まさに画面で開いているステップ・解説・問題番号ごとの全問題文をすべて把握した状態で回答します。',
       '【指導ルール】',
-      '1. 生徒が「(3)番がわからない」「鋭角のときは？」などと聞いたら、今開いている教材の内容や該当番号の問題を具体的に参照して答える。',
-      '2. いきなり最終答えだけを投げず、最初の一歩・途中式・考え方をわかりやすく示す。',
+      '1. 生徒が「(3)番がわからない」「そもそも外接円って何？」などと聞いたら、今開いている教材の内容や該当番号の問題・基礎用語を具体的にわかりやすく答える。',
+      '2. いきなり最終答えだけを投げず、最初の一歩・途中式・考え方を段階的に示す。',
       '3. 数式は必ず KaTeX 記法（インラインは $...$、ブロックは $$...$$）で正確に書く。',
       '4. ノートに鉛筆で書いて確認できるよう、簡潔で親しみやすい日本語（300〜500文字程度）で答える。',
     ].join('\n');
@@ -117,6 +66,16 @@ export default async function handler(req, res) {
       problemContext,
     ].join('\n');
 
+    const validHistory = Array.isArray(history)
+      ? history
+          .slice(-6)
+          .filter((msg) => msg && typeof msg.text === 'string' && msg.text.trim())
+          .map((msg) => ({
+            role: msg.role === 'student' ? 'user' : 'model',
+            parts: [{ text: msg.text }],
+          }))
+      : [];
+
     const contents = [
       { role: 'user', parts: [{ text: contextMessage }] },
       {
@@ -127,14 +86,11 @@ export default async function handler(req, res) {
           },
         ],
       },
-      ...history.slice(-6).map((msg) => ({
-        role: msg.role === 'student' ? 'user' : 'model',
-        parts: [{ text: msg.text }],
-      })),
+      ...validHistory,
       { role: 'user', parts: [{ text: question }] },
     ];
 
-    const result = await callGeminiWithFallback(apiKey, {
+    const result = await callGeminiRobust(apiKey, {
       system_instruction: { parts: [{ text: systemPrompt }] },
       contents,
       generationConfig: {
@@ -144,20 +100,20 @@ export default async function handler(req, res) {
     });
 
     if (!result.ok) {
-      const friendlyMsg =
-        result.status === 503 || result.status === 429
-          ? 'ただいまAI先生が大変混み合っています。5〜10秒ほど待ってから、もう一度送信してください。'
-          : `AI先生との通信に失敗しました（エラー ${result.status}）。少し時間を置いて再度お試しください。`;
-      return res.status(result.status === 503 || result.status === 429 ? 503 : 502).json({
-        error: friendlyMsg,
-      });
+      console.error('[ask-gemini] All candidates failed:', result.attemptLog, result.errorText?.slice(0, 200));
+      const friendlyMsg = result.hadAuthError
+        ? 'AI先生のAPIキー設定に問題があります。先生または管理者へお知らせください。'
+        : result.hadBusy || result.status === 503 || result.status === 429
+        ? 'ただいまAI先生が大変混み合っています。5〜10秒ほど待ってから「もう一度送信」を押してください。'
+        : `AI先生との通信に失敗しました（エラー ${result.status}）。少し時間を置いて再度お試しください。`;
+      return res
+        .status(result.hadBusy || result.status === 503 || result.status === 429 ? 503 : 502)
+        .json({ error: friendlyMsg });
     }
 
     const answer =
-      result.data?.candidates?.[0]?.content?.parts
-        ?.map((p) => p.text || '')
-        .join('\n')
-        .trim() || '回答を生成できませんでした。もう一度質問してみてください。';
+      extractGeminiText(result.data) ||
+      '回答を生成できませんでした。もう一度質問してみてください。';
 
     return res.status(200).json({ answer, model: result.model });
   } catch (err) {

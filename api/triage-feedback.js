@@ -2,6 +2,12 @@
 // テストプレイヤーからのご意見・報告を Gemini API で判定し、
 // 採用 / 保留 / 方針却下 / ノイズ除外 と「ルール自動アップデート案」を返す
 
+import {
+  callGeminiRobust,
+  extractGeminiText,
+  getGeminiApiKey,
+} from './_gemini.js';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
@@ -12,11 +18,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing feedback message' });
   }
 
-  const apiKey =
-    process.env.GEMINI_API_KEY ||
-    process.env.GOOGLE_API_KEY ||
-    process.env.API_KEY;
-
+  const apiKey = getGeminiApiKey();
   if (!apiKey) {
     return res.status(200).json({
       decision: 'pending_corroboration',
@@ -59,85 +61,66 @@ export default async function handler(req, res) {
   }
 }`;
 
-  const models = Array.from(
-    new Set([
-      process.env.GEMINI_MODEL || 'gemini-3.8-flash',
-      'gemini-3.8-flash',
-      'gemini-2.5-flash',
-      'gemini-2.5-flash-lite',
-      'gemini-2.0-flash',
-    ])
-  );
-  for (const model of models) {
-    try {
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
-      const geminiRes = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.2,
-            responseMimeType: 'application/json',
-            maxOutputTokens: 512,
-          },
-        }),
-      });
+  try {
+    const result = await callGeminiRobust(apiKey, {
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.2,
+        responseMimeType: 'application/json',
+        maxOutputTokens: 512,
+      },
+    });
 
-      if (!geminiRes.ok) {
-        if ([404, 429, 500, 502, 503, 504].includes(geminiRes.status)) continue;
-        throw new Error(`Gemini error ${geminiRes.status}`);
-      }
-
-      const data = await geminiRes.json();
-      const text =
-        data?.candidates?.[0]?.content?.parts
-          ?.map((p) => p.text || '')
-          .join('')
-          .trim() || '';
-      const cleaned = text.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/, '').trim();
-      const parsed = JSON.parse(cleaned);
-
-      const validDecisions = new Set(['adopted', 'pending_corroboration', 'rejected', 'ignored']);
-      const validTargets = new Set([
-        'noiseKeywords',
-        'policyConflictKeywords',
-        'highSignalBugKeywords',
-        'none',
-      ]);
-
-      return res.status(200).json({
-        decision: validDecisions.has(parsed?.decision)
-          ? parsed.decision
-          : 'pending_corroboration',
-        priority: ['HIGH', 'MEDIUM', 'LOW'].includes(parsed?.priority)
-          ? parsed.priority
-          : 'LOW',
-        reason:
-          typeof parsed?.reason === 'string' && parsed.reason.trim()
-            ? parsed.reason.trim()
-            : 'AIによる自動判定を実施しました。',
-        judgedBy: model,
-        suggestedRuleUpdate: {
-          target: validTargets.has(parsed?.suggestedRuleUpdate?.target)
-            ? parsed.suggestedRuleUpdate.target
-            : 'none',
-          pattern:
-            typeof parsed?.suggestedRuleUpdate?.pattern === 'string'
-              ? parsed.suggestedRuleUpdate.pattern.trim().slice(0, 24)
-              : '',
-        },
-      });
-    } catch {
-      // try next fallback model
+    if (!result.ok) {
+      throw new Error(`Gemini error ${result.status}`);
     }
-  }
 
-  return res.status(200).json({
-    decision: 'pending_corroboration',
-    priority: 'LOW',
-    reason: 'AI判定が一時利用不可のため保留（次回バッチで再判定）',
-    judgedBy: 'fallback',
-    suggestedRuleUpdate: { target: 'none', pattern: '' },
-  });
+    const text = extractGeminiText(result.data);
+    const cleaned = text.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/, '').trim();
+    const parsed = JSON.parse(cleaned);
+
+    const validDecisions = new Set([
+      'adopted',
+      'pending_corroboration',
+      'rejected',
+      'ignored',
+    ]);
+    const validTargets = new Set([
+      'noiseKeywords',
+      'policyConflictKeywords',
+      'highSignalBugKeywords',
+      'none',
+    ]);
+
+    return res.status(200).json({
+      decision: validDecisions.has(parsed?.decision)
+        ? parsed.decision
+        : 'pending_corroboration',
+      priority: ['HIGH', 'MEDIUM', 'LOW'].includes(parsed?.priority)
+        ? parsed.priority
+        : 'LOW',
+      reason:
+        typeof parsed?.reason === 'string' && parsed.reason.trim()
+          ? parsed.reason.trim()
+          : 'AIによる自動判定を実施しました。',
+      judgedBy: result.model,
+      suggestedRuleUpdate: {
+        target: validTargets.has(parsed?.suggestedRuleUpdate?.target)
+          ? parsed.suggestedRuleUpdate.target
+          : 'none',
+        pattern:
+          typeof parsed?.suggestedRuleUpdate?.pattern === 'string'
+            ? parsed.suggestedRuleUpdate.pattern.trim().slice(0, 24)
+            : '',
+      },
+    });
+  } catch {
+    return res.status(200).json({
+      decision: 'pending_corroboration',
+      priority: 'LOW',
+      reason: 'AI判定が一時利用不可のため保留（次回バッチで再判定）',
+      judgedBy: 'fallback',
+      suggestedRuleUpdate: { target: 'none', pattern: '' },
+    });
+  }
 }

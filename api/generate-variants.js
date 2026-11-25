@@ -1,6 +1,12 @@
 // Vercel Serverless Function: POST /api/generate-variants
 // 同レベル・同問題数の「真の類題」（単なる並び替えや数値入れ替えでない）をGemini APIで構造化JSON生成
 
+import {
+  callGeminiRobust,
+  extractGeminiText,
+  getGeminiApiKey,
+} from './_gemini.js';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
@@ -20,11 +26,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'stepId is required' });
   }
 
-  const apiKey =
-    process.env.GEMINI_API_KEY ||
-    process.env.GOOGLE_API_KEY ||
-    process.env.API_KEY;
-
+  const apiKey = getGeminiApiKey();
   if (!apiKey) {
     return res.status(503).json({
       error: 'GEMINI_API_KEY が未設定のためAI類題を生成できません。',
@@ -39,7 +41,7 @@ export default async function handler(req, res) {
           .join('\n')
       : '';
 
-    const prompt = `あなたは日本の数学専門教材作成AI（公文式〜茨城大・筑波大二次試験対策対応）です。
+    const prompt = `あなたは日本の数学専門教材作成AI（公文式〜全国国公立二次試験対策対応）です。
 生徒が以下のステップで90%未満だったため、再挑戦用の「類題セット #${variantNumber}」を作成してください。
 
 【厳守ルール】
@@ -62,54 +64,22 @@ export default async function handler(req, res) {
 【元の問題（これらと重複しない新しい類題を作ること）】
 ${sampleList}`;
 
-    const models = Array.from(
-      new Set([
-        process.env.GEMINI_MODEL || 'gemini-3.8-flash',
-        'gemini-3.8-flash',
-        'gemini-2.5-flash',
-        'gemini-2.5-flash-lite',
-        'gemini-2.0-flash',
-      ])
-    );
+    const result = await callGeminiRobust(apiKey, {
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.75,
+        responseMimeType: 'application/json',
+        maxOutputTokens: 4096,
+      },
+    });
 
-    let data = null;
-    let lastStatus = 502;
-    for (const model of models) {
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
-      const geminiRes = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.75,
-            responseMimeType: 'application/json',
-            maxOutputTokens: 4096,
-          },
-        }),
-      });
-
-      if (geminiRes.ok) {
-        data = await geminiRes.json();
-        break;
-      }
-      lastStatus = geminiRes.status;
-      if (![404, 429, 500, 502, 503, 504].includes(geminiRes.status)) {
-        break;
-      }
-    }
-
-    if (!data) {
+    if (!result.ok) {
       return res.status(502).json({
-        error: `類題生成APIが一時的に混雑しています (${lastStatus})。`,
+        error: `類題生成APIが一時的に混雑しています (${result.status})。`,
       });
     }
-    const rawText =
-      data?.candidates?.[0]?.content?.parts
-        ?.map((p) => p.text || '')
-        .join('')
-        .trim() || '';
 
+    const rawText = extractGeminiText(result.data);
     const cleaned = rawText
       .replace(/^```(?:json)?\n?/i, '')
       .replace(/\n?```$/, '')
@@ -117,7 +87,10 @@ ${sampleList}`;
     const parsed = JSON.parse(cleaned);
     const problems = Array.isArray(parsed?.problems)
       ? parsed.problems
-          .filter((item) => item && typeof item.prompt === 'string' && typeof item.answer === 'string')
+          .filter(
+            (item) =>
+              item && typeof item.prompt === 'string' && typeof item.answer === 'string'
+          )
           .slice(0, questionCount)
       : [];
 
@@ -140,7 +113,7 @@ ${sampleList}`;
       createdBy: 'gemini',
     };
 
-    return res.status(200).json({ variant, reused: false });
+    return res.status(200).json({ variant, reused: false, model: result.model });
   } catch (err) {
     return res.status(500).json({
       error: err instanceof Error ? err.message : 'Internal Server Error',

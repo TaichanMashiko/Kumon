@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Loader2, MessageCircle, Send, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Loader2, MessageCircle, RotateCcw, Send, X } from 'lucide-react';
 import type {
   AiChatMessage,
   StepDocument,
@@ -33,26 +33,38 @@ export function AiTutorPanel({
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastFailedQuestion, setLastFailedQuestion] = useState<string | null>(null);
 
-  const askQuestion = async (questionText: string) => {
+  // ステップが変わったら会話履歴をクリア（別単元の履歴混入を防ぐ）
+  useEffect(() => {
+    setMessages([]);
+    setError(null);
+    setLastFailedQuestion(null);
+  }, [step.frontmatter.id, variantNumber]);
+
+  const askQuestion = async (questionText: string, isRetry = false) => {
     const trimmed = questionText.trim();
     if (!trimmed || loading) return;
 
-    const studentMsg: AiChatMessage = {
-      id: `msg-s-${Date.now()}`,
-      role: 'student',
-      text: trimmed,
-      createdAt: new Date().toISOString(),
-    };
+    const historyToSend = isRetry ? messages.slice(0, -1) : messages;
 
-    setMessages((prev) => [...prev, studentMsg]);
-    setInput('');
-    setError(null);
-    setLoading(true);
-
-    if (onLogConfusionNote) {
-      onLogConfusionNote(`[質問] ${trimmed}`);
+    if (!isRetry) {
+      const studentMsg: AiChatMessage = {
+        id: `msg-s-${Date.now()}`,
+        role: 'student',
+        text: trimmed,
+        createdAt: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, studentMsg]);
+      setInput('');
+      if (onLogConfusionNote) {
+        onLogConfusionNote(`[質問] ${trimmed}`);
+      }
     }
+
+    setError(null);
+    setLastFailedQuestion(null);
+    setLoading(true);
 
     try {
       const res = await fetch('/api/ask-gemini', {
@@ -67,7 +79,7 @@ export function AiTutorPanel({
           explanation,
           problems,
           question: trimmed,
-          history: messages,
+          history: historyToSend,
         }),
       });
 
@@ -84,6 +96,7 @@ export function AiTutorPanel({
       };
       setMessages((prev) => [...prev, tutorMsg]);
     } catch (err) {
+      setLastFailedQuestion(trimmed);
       setError(
         err instanceof Error
           ? err.message
@@ -183,7 +196,18 @@ export function AiTutorPanel({
 
               {error && (
                 <div className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs text-red-700">
-                  {error}
+                  <p>{error}</p>
+                  {lastFailedQuestion && (
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={() => askQuestion(lastFailedQuestion, true)}
+                      className="mt-2 inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1 text-[11px] font-bold text-red-700 ring-1 ring-red-200 transition hover:bg-red-100/50"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      <span>もう一度送信する</span>
+                    </button>
+                  )}
                 </div>
               )}
             </div>
