@@ -25,12 +25,36 @@ export function FeedbackModal({
 }: FeedbackModalProps) {
   const [category, setCategory] = useState<string>(CATEGORIES[0]);
   const [message, setMessage] = useState('');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
+  const validateMessage = (raw: string): string | null => {
+    const trimmed = raw.trim();
+    const compact = trimmed.replace(/\s+/g, '');
+    if (compact.length < 10) {
+      return '改善に活かすため、10文字以上で具体的な内容を入力してください。';
+    }
+    // 同じ文字の連続（例：「ああああああああああ」）や記号のみのノイズを防止
+    if (/^(.)\1{4,}$/.test(compact) || new Set(compact).size <= 2) {
+      return '同じ文字の繰り返しではなく、具体的な気づきや不具合の内容を入力してください。';
+    }
+    const lastSentAt = Number(localStorage.getItem('mathstep_last_feedback_ts') || '0');
+    if (Date.now() - lastSentAt < 60_000) {
+      return '連続送信を防ぐため、1分ほど空けてから送信してください。';
+    }
+    return null;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() || submitting) return;
+    if (submitting) return;
+    const validationError = validateMessage(message);
+    if (validationError) {
+      setErrorMsg(validationError);
+      return;
+    }
+    setErrorMsg(null);
 
     setSubmitting(true);
     try {
@@ -45,6 +69,7 @@ export function FeedbackModal({
         createdAt: new Date().toISOString(),
         status: 'open',
       });
+      localStorage.setItem('mathstep_last_feedback_ts', String(Date.now()));
       setSubmitted(true);
     } finally {
       setSubmitting(false);
@@ -120,14 +145,24 @@ export function FeedbackModal({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700">内容</label>
+              <label className="block text-xs font-semibold text-slate-700">
+                内容 <span className="font-normal text-slate-400">（10文字以上・具体的に）</span>
+              </label>
               <textarea
                 value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                onChange={(e) => {
+                  setMessage(e.target.value);
+                  if (errorMsg) setErrorMsg(null);
+                }}
                 rows={4}
-                placeholder="例：このステップの例題がもう少し詳しいとわかりやすい、など"
+                placeholder="例：問3の解説で鈍角の話が書いてあるが、問題は鋭角しか出ていない / 例題の途中式をもう1行増やしてほしい、など"
                 className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-teal-700 focus:bg-white focus:outline-none"
               />
+              {errorMsg && (
+                <p className="mt-1.5 text-[11px] font-semibold text-rose-600">
+                  {errorMsg}
+                </p>
+              )}
             </div>
 
             {currentStepTitle && (

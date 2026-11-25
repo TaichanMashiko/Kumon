@@ -766,6 +766,387 @@ export function generateExamProblem(
       };
     }
 
+    // ===== 全国国公立59校網羅調査による新規追加テンプレート（数Ⅰ〜数Ⅲ・二次大問） =====
+    case 'hs1_cubic_expand_factor': {
+      const mode = (params.mode as string) || 'factor';
+      const a = randInt(rng, 1, 4);
+      if (mode === 'decimal') {
+        const n = pick(rng, [2, 3, 5, 6, 7, 10, 11]);
+        const intPart = Math.floor(Math.sqrt(n));
+        return {
+          prompt: `$\\sqrt{${n}}$ の整数部分 $a$ と小数部分 $b$ を求めよ。`,
+          answer: `$${intPart} < \\sqrt{${n}} < ${intPart + 1}$ より $a = ${intPart}, \\ b = \\sqrt{${n}} - ${intPart}$`,
+        };
+      }
+      if (mode === 'expand') {
+        return {
+          prompt: `$(x + ${a})^3$ を展開せよ。`,
+          answer: `$x^3 + ${3 * a}x^2 + ${3 * a * a}x + ${a * a * a}$`,
+        };
+      }
+      return {
+        prompt: `$x^3 + ${a * a * a}$ を因数分解せよ。`,
+        answer: `$(x + ${a})(x^2 - ${a}x + ${a * a})$`,
+      };
+    }
+
+    case 'hs1_qf_root_loc': {
+      const a = randInt(rng, 1, 3);
+      // x^2 - 2ax + k = 0 has two distinct positive roots -> axis a>0 (OK), D/4 = a^2 - k > 0 => k < a^2, f(0) = k > 0
+      return {
+        prompt: `2次方程式 $x^2 - ${2 * a}x + k = 0$ が異なる2つの正の解をもつとき、定数 $k$ の値の範囲を求めよ。`,
+        answer: `軸 $x=${a}>0$、$D/4 = ${a * a} - k > 0$、$f(0) = k > 0$ より **$0 < k < ${a * a}$**`,
+      };
+    }
+
+    case 'hs1_stats_corr': {
+      const mode = (params.mode as string) || 'corr';
+      if (mode === 'transform') {
+        const a = randInt(rng, 2, 5);
+        const b = randNonZero(rng, -6, 6);
+        const m = randInt(rng, 4, 10);
+        const v = randInt(rng, 2, 5);
+        return {
+          prompt: `平均値 $${m}$、分散 $${v}$ の変量 $x$ を $y = ${a}x ${fmtSigned(b)}$ で変換したとき、$y$ の平均値と分散を求めよ。`,
+          answer: `平均値 $${a * m + b}$、分散 $${a * a * v}$`,
+        };
+      }
+      const sx = pick(rng, [2, 3, 4, 5]);
+      const sy = pick(rng, [2, 4, 5]);
+      const cov = randInt(rng, 1, sx * sy - 1);
+      return {
+        prompt: `2つの変量 $x, y$ の標準偏差が $s_x = ${sx}, \\ s_y = ${sy}$、共分散が $s_{xy} = ${cov}$ のとき、相関係数 $r$ を求めよ。`,
+        answer: `$\\displaystyle r = \\frac{s_{xy}}{s_x s_y} = ${fmtFrac(cov, sx * sy)}$`,
+      };
+    }
+
+    case 'hsa_perm_comb_adv': {
+      const mode = (params.mode as string) || 'circle';
+      if (mode === 'same') {
+        const a = randInt(rng, 2, 3);
+        const b = randInt(rng, 2, 3);
+        const total = a + b;
+        return {
+          prompt: `同じ文字 $\\mathrm{A}$ が $${a}$ 個、$\\mathrm{B}$ が $${b}$ 個の計 $${total}$ 個を一列に並べる方法は何通りあるか。`,
+          answer: `$\\displaystyle \\frac{${total}!}{${a}!\\,${b}!} = ${nCr(total, a)}$ 通り`,
+        };
+      }
+      if (mode === 'rep_comb') {
+        const n = 3;
+        const r = randInt(rng, 3, 6);
+        return {
+          prompt: `3種類の果物から重複を許して $${r}$ 個選ぶ組合せは何通りあるか（$_3\\mathrm{H}_{${r}}$）。`,
+          answer: `$_{${n + r - 1}}\\mathrm{C}_{${r}} = ${nCr(n + r - 1, r)}$ 通り`,
+        };
+      }
+      const n = randInt(rng, 4, 7);
+      let fact = 1;
+      for (let i = 2; i <= n - 1; i += 1) fact *= i;
+      return {
+        prompt: `異なる $${n}$ 人が円形のテーブルに座る座り方は何通りあるか。`,
+        answer: `$(${n}-1)! = ${fact}$ 通り`,
+      };
+    }
+
+    case 'hsa_cond_prob_exp': {
+      const mode = (params.mode as string) || 'cond';
+      if (mode === 'exp') {
+        const prize = pick(rng, [300, 600, 900, 1200]);
+        const win = randInt(rng, 1, 2);
+        const total = 6;
+        return {
+          prompt: `1個のさいころを投げて $${win === 1 ? '6の目' : '5以上の目'}$ が出たら $${prize}$ 円もらえ、それ以外は $0$ 円のゲームがある。賞金の期待値を求めよ。`,
+          answer: `$\\displaystyle ${prize} \\times \\frac{${win}}{${total}} = ${(prize * win) / total}$ 円`,
+        };
+      }
+      const r = randInt(rng, 2, 5);
+      const w = randInt(rng, 2, 4);
+      const total = r + w;
+      return {
+        prompt: `赤玉 $${r}$ 個、白玉 $${w}$ 個が入った袋から玉を1個ずつ2回取り出す（戻さない）。1回目が赤玉だったとき、2回目も赤玉である条件付き確率を求めよ。`,
+        answer: `残り $${total - 1}$ 個中赤玉 $${r - 1}$ 個より $\\displaystyle ${fmtFrac(r - 1, total - 1)}$`,
+      };
+    }
+
+    case 'hsa_ceva_menelaus': {
+      const mode = (params.mode as string) || 'ceva';
+      const a = randInt(rng, 1, 4);
+      const b = randInt(rng, 2, 5);
+      const c = randInt(rng, 1, 4);
+      const d = randInt(rng, 2, 5);
+      if (mode === 'menelaus') {
+        return {
+          prompt: `メネラウスの定理で $\\displaystyle \\frac{\\mathrm{AR}}{\\mathrm{RB}}\\cdot\\frac{\\mathrm{BP}}{\\mathrm{PC}}\\cdot\\frac{\\mathrm{CQ}}{\\mathrm{QA}} = 1$ が成り立ち、$\\frac{\\mathrm{AR}}{\\mathrm{RB}} = \\frac{${a}}{${b}}, \\ \\frac{\\mathrm{BP}}{\\mathrm{PC}} = \\frac{${c}}{${d}}$ のとき、$\\frac{\\mathrm{CQ}}{\\mathrm{QA}}$ を求めよ。`,
+          answer: `$\\displaystyle ${fmtFrac(b * d, a * c)}$`,
+        };
+      }
+      return {
+        prompt: `$\\triangle\\mathrm{ABC}$ でチェバの定理 $\\displaystyle \\frac{\\mathrm{AR}}{\\mathrm{RB}}\\cdot\\frac{\\mathrm{BP}}{\\mathrm{PC}}\\cdot\\frac{\\mathrm{CQ}}{\\mathrm{QA}} = 1$ を適用し、$\\mathrm{AR}:\\mathrm{RB} = ${a}:${b}, \\ \\mathrm{BP}:\\mathrm{PC} = ${c}:${d}$ のとき、$\\mathrm{CQ}:\\mathrm{QA}$ を求めよ。`,
+        answer: `$${b * d} : ${a * c}$` + (gcd(b * d, a * c) > 1 ? `（簡単にすると $${(b * d) / gcd(b * d, a * c)} : ${(a * c) / gcd(b * d, a * c)}$）` : ''),
+      };
+    }
+
+    case 'hsa_euclid_mod': {
+      const mode = (params.mode as string) || 'diophantine';
+      if (mode === 'mod') {
+        const m = pick(rng, [3, 5, 7]);
+        const p = randInt(rng, 4, 8);
+        const base = m + 1;
+        return {
+          prompt: `合同式を用いて $${base}^{${p}}$ を $${m}$ で割った余りを求めよ。`,
+          answer: `$${base} \\equiv 1 \\pmod{${m}}$ より $${base}^{${p}} \\equiv 1^{${p}} = 1 \\pmod{${m}}$、よって余り **$1$**`,
+        };
+      }
+      const bank: GeneratedProblem[] = [
+        {
+          prompt: '一次不定方程式 $3x + 2y = 1$ の整数解をすべて求めよ（$k$ を整数とする）。',
+          answer: '特殊解 $(1, -1)$ より $x = 2k + 1, \\ y = -3k - 1$',
+        },
+        {
+          prompt: '一次不定方程式 $5x + 3y = 1$ の整数解をすべて求めよ（$k$ を整数とする）。',
+          answer: '特殊解 $(2, -3)$ より $x = 3k + 2, \\ y = -5k - 3$',
+        },
+        {
+          prompt: '一次不定方程式 $7x + 4y = 1$ の整数解をすべて求めよ（$k$ を整数とする）。',
+          answer: '特殊解 $(-1, 2)$ より $x = 4k - 1, \\ y = -7k + 2$',
+        },
+        {
+          prompt: '一次不定方程式 $4x - 3y = 1$ の整数解をすべて求めよ（$k$ を整数とする）。',
+          answer: '特殊解 $(1, 1)$ より $x = 3k + 1, \\ y = 4k + 1$',
+        },
+        {
+          prompt: '一次不定方程式 $5x - 2y = 1$ の整数解をすべて求めよ（$k$ を整数とする）。',
+          answer: '特殊解 $(1, 2)$ より $x = 2k + 1, \\ y = 5k + 2$',
+        },
+      ];
+      return pick(rng, bank);
+    }
+
+    case 'hs2_identity_amgm': {
+      const mode = (params.mode as string) || 'amgm';
+      if (mode === 'identity') {
+        const a = randInt(rng, 2, 5);
+        const b = randNonZero(rng, -4, 4);
+        const c = randNonZero(rng, -5, 5);
+        return {
+          prompt: `$${a}x^2 ${fmtSigned(b)}x ${fmtSigned(c)} = p(x-1)^2 + q(x-1) + r$ が $x$ の恒等式となるとき、定数 $p, q, r$ を求めよ。`,
+          answer: `$p = ${a}, \\ q = ${2 * a + b}, \\ r = ${a + b + c}$`,
+        };
+      }
+      const k = pick(rng, [1, 4, 9, 16, 25]);
+      const rt = Math.round(Math.sqrt(k));
+      return {
+        prompt: `$x > 0$ のとき、相加平均と相乗平均の大小関係を用いて $x + \\frac{${k}}{x}$ の最小値と、そのときの $x$ の値を求めよ。`,
+        answer: `最小値 $${2 * rt}$（等号成立は $x = ${rt}$ のとき）`,
+      };
+    }
+
+    case 'hs2_circle_region': {
+      const mode = (params.mode as string) || 'tangent';
+      if (mode === 'lp') {
+        const a = randInt(rng, 2, 4);
+        const b = randInt(rng, 1, 3);
+        const r = randInt(rng, 2, 4);
+        return {
+          prompt: `連立不等式 $x \\ge 0, \\ y \\ge 0, \\ x + y \\le ${r}$ の表す領域で、$k = ${a}x + ${b}y$ の最大値を求めよ。`,
+          answer: `領域の頂点 $(0,0), (${r},0), (0,${r})$ を比較して最大値 $${Math.max(a, b) * r}$`,
+        };
+      }
+      const pts: Array<[number, number, number]> = [
+        [3, 4, 25],
+        [4, 3, 25],
+        [1, 2, 5],
+        [2, 1, 5],
+        [3, -4, 25],
+      ];
+      const [x1, y1, r2] = pick(rng, pts);
+      return {
+        prompt: `円 $x^2 + y^2 = ${r2}$ 上の点 $(${x1}, \\ ${y1})$ における接線の方程式を求めよ。`,
+        answer: `$${x1}x ${fmtSigned(y1)}y = ${r2}$`,
+      };
+    }
+
+    case 'hs2_trig_eq_log_digits': {
+      const mode = (params.mode as string) || 'digits';
+      if (mode === 'trig_eq') {
+        const bank: GeneratedProblem[] = [
+          { prompt: '$0 \\le \\theta < 2\\pi$ のとき、方程式 $\\sin\\theta = \\frac{1}{2}$ を解け。', answer: '$\\displaystyle \\theta = \\frac{\\pi}{6}, \\ \\frac{5}{6}\\pi$' },
+          { prompt: '$0 \\le \\theta < 2\\pi$ のとき、方程式 $\\cos\\theta = \\frac{1}{2}$ を解け。', answer: '$\\displaystyle \\theta = \\frac{\\pi}{3}, \\ \\frac{5}{3}\\pi$' },
+          { prompt: '$0 \\le \\theta < 2\\pi$ のとき、方程式 $\\sin\\theta = \\frac{\\sqrt{3}}{2}$ を解け。', answer: '$\\displaystyle \\theta = \\frac{\\pi}{3}, \\ \\frac{2}{3}\\pi$' },
+          { prompt: '$0 \\le \\theta < 2\\pi$ のとき、方程式 $\\cos\\theta = -\\frac{1}{2}$ を解け。', answer: '$\\displaystyle \\theta = \\frac{2}{3}\\pi, \\ \\frac{4}{3}\\pi$' },
+          { prompt: '$0 \\le \\theta < 2\\pi$ のとき、方程式 $\\tan\\theta = 1$ を解け。', answer: '$\\displaystyle \\theta = \\frac{\\pi}{4}, \\ \\frac{5}{4}\\pi$' },
+        ];
+        return pick(rng, bank);
+      }
+      const n = pick(rng, [10, 20, 30, 50, 100]);
+      const logVal = Number((n * 0.301).toFixed(3));
+      const digits = Math.floor(logVal) + 1;
+      return {
+        prompt: `$\\log_{10} 2 = 0.3010$ とするとき、$2^{${n}}$ は何桁の整数か求めよ。`,
+        answer: `$\\log_{10} 2^{${n}} = ${logVal}$ より **${digits} 桁**`,
+      };
+    }
+
+    case 'hsb_diff_group_induct': {
+      const mode = (params.mode as string) || 'diff';
+      if (mode === 'group') {
+        const k = randInt(rng, 4, 8);
+        const start = ((k - 1) * k) / 2 + 1;
+        return {
+          prompt: `自然数の列を $1 \\mid 2, 3 \\mid 4, 5, 6 \\mid 7, 8, 9, 10 \\mid \\cdots$ のように第 $n$ 群に $n$ 個の数が入るように分けるとき、第 $${k}$ 群の最初の数を求めよ。`,
+          answer: `第 $${k - 1}$ 群までの個数の和 $+ 1 = \\frac{${k - 1}\\cdot ${k}}{2} + 1 = ${start}$`,
+        };
+      }
+      const a1 = randInt(rng, 1, 5);
+      const d = randInt(rng, 2, 4);
+      // b_n = d*n -> a_n = a1 + sum_{k=1}^{n-1} d*k = a1 + d*n(n-1)/2
+      return {
+        prompt: `初項 $a_1 = ${a1}$、階差数列が $b_n = ${d}n$ である数列 $\\{a_n\\}$ の一般項 $a_n$ を求めよ。`,
+        answer: `$n \\ge 2$ で $a_n = ${a1} + \\sum_{k=1}^{n-1} ${d}k = ${fmtFrac(d, 2)}n^2 ${fmtSigned(-d / 2 === Math.floor(-d / 2) ? -d / 2 : 0)}n \\cdots \\Rightarrow \\displaystyle ${a1} + \\frac{${d}}{2}n(n-1)$（$n=1$ でも成立）`,
+      };
+    }
+
+    case 'hsb_normal_conf': {
+      const m = pick(rng, [50, 60, 70, 100]);
+      const sigma = pick(rng, [5, 10]);
+      const k = pick(rng, [1, 2, -1]);
+      const x = m + k * sigma;
+      return {
+        prompt: `確率変数 $X$ が正規分布 $N(${m}, \\ ${sigma}^2)$ に従うとき、$X = ${x}$ に対応する標準正規分布 $Z = \\frac{X - m}{\\sigma}$ の値を求めよ。`,
+        answer: `$\\displaystyle Z = \\frac{${x} - ${m}}{${sigma}} = ${k}$`,
+      };
+    }
+
+    case 'hsc_pos_vec_space': {
+      const mode = (params.mode as string) || 'pos';
+      if (mode === 'space_foot') {
+        const a = randInt(rng, 1, 3);
+        const b = randInt(rng, 1, 3);
+        const c = randInt(rng, 2, 5);
+        return {
+          prompt: `空間の点 $\\mathrm{P}(${a}, \\ ${b}, \\ ${c})$ から $xy$ 平面に下ろした垂線の足 $\\mathrm{H}$ の座標と線分 $\\mathrm{PH}$ の長さを求めよ。`,
+          answer: `$\\mathrm{H}(${a}, \\ ${b}, \\ 0)$、$\\mathrm{PH} = ${c}$`,
+        };
+      }
+      const m = randInt(rng, 1, 3);
+      const n = randInt(rng, 2, 4);
+      return {
+        prompt: `2点 $\\mathrm{A}(\\vec{a}), \\ \\mathrm{B}(\\vec{b})$ を結ぶ線分 $\\mathrm{AB}$ を $${m} : ${n}$ に内分する点 $\\mathrm{P}$ の位置ベクトル $\\vec{p}$ を表せ。`,
+        answer: `$\\displaystyle \\vec{p} = \\frac{${n}\\vec{a} + ${m}\\vec{b}}{${m + n}}$`,
+      };
+    }
+
+    case 'hsc_hyperbola_polar': {
+      const mode = (params.mode as string) || 'hyperbola';
+      if (mode === 'polar') {
+        const r = randInt(rng, 2, 6);
+        return {
+          prompt: `極座標 $\\left(${r}, \\ \\frac{\\pi}{3}\\right)$ で表される点の直交座標 $(x, y)$ を求めよ。`,
+          answer: `$\\displaystyle \\left(${fmtFrac(r, 2)}, \\ ${fmtFrac(r, 2)}\\sqrt{3}\\right)$`,
+        };
+      }
+      const a = randInt(rng, 2, 4);
+      const b = randInt(rng, 2, 4);
+      return {
+        prompt: `双曲線 $\\displaystyle \\frac{x^2}{${a * a}} - \\frac{y^2}{${b * b}} = 1$ の漸近線の方程式を求めよ。`,
+        answer: `$\\displaystyle y = \\pm ${fmtFrac(b, a)}x$`,
+      };
+    }
+
+    case 'hsc_complex_geom': {
+      const bank: GeneratedProblem[] = [
+        {
+          prompt: '複素数平面上で、方程式 $|z - 2| = |z - 4i|$ を満たす点 $z$ はどのような図形を描くか。',
+          answer: '2点 $2$ と $4i$ を結ぶ線分の垂直二等分線',
+        },
+        {
+          prompt: '複素数平面上で、方程式 $|z - (1 + 2i)| = 3$ を満たす点 $z$ はどのような図形を描くか。',
+          answer: '点 $1 + 2i$ を中心とする半径 $3$ の円',
+        },
+        {
+          prompt: '複素数平面上で、3点 $\\alpha, \\beta, \\gamma$ について $\\frac{\\gamma - \\alpha}{\\beta - \\alpha}$ が純虚数であるとき、2直線 $\\mathrm{AB}$ と $\\mathrm{AC}$ の位置関係を答えよ。',
+          answer: '$\\mathrm{AB} \\perp \\mathrm{AC}$（垂直に交わる）',
+        },
+        {
+          prompt: '複素数平面上で、3点 $\\alpha, \\beta, \\gamma$ について $\\frac{\\gamma - \\alpha}{\\beta - \\alpha}$ が実数であるとき、3点の位置関係を答えよ。',
+          answer: '3点 $\\mathrm{A, B, C}$ は一直線上にある',
+        },
+      ];
+      return pick(rng, bank);
+    }
+
+    case 'hs3_lim_squeeze_cont': {
+      const a = randInt(rng, 1, 5);
+      return {
+        prompt: `はさみうちの原理を用いて $\\displaystyle \\lim_{x \\to \\infty} \\frac{\\sin ${a}x}{x}$ を求めよ。`,
+        answer: `$-\\frac{1}{x} \\le \\frac{\\sin ${a}x}{x} \\le \\frac{1}{x}$ より極限値は **$0$**`,
+      };
+    }
+
+    case 'hs3_diff_quot_inflect': {
+      const mode = (params.mode as string) || 'quot';
+      if (mode === 'ineq') {
+        return {
+          prompt: '$x > 0$ のとき、微分を用いて不等式 $e^x > 1 + x$ が成り立つことを示す手順の要点を述べよ。',
+          answer: '$f(x) = e^x - (1+x)$ とおくと $f(0) = 0$ かつ $x > 0$ で $f\'(x) = e^x - 1 > 0$ より単調増加となるため $f(x) > 0$',
+        };
+      }
+      if (mode === 'inflect') {
+        const a = randInt(rng, 1, 3);
+        return {
+          prompt: `曲線 $y = x^3 - ${3 * a}x^2 + 1$ の変曲点の $x$ 座標を求めよ。`,
+          answer: `$y'' = 6x - ${6 * a} = 0$ より $x = ${a}$（前後で $y''$ の符号変化あり）`,
+        };
+      }
+      const a = randInt(rng, 1, 4);
+      return {
+        prompt: `商の微分公式を用いて $\\displaystyle y = \\frac{x}{x + ${a}}$ を微分せよ。`,
+        answer: `$\\displaystyle y' = \\frac{${a}}{(x + ${a})^2}$`,
+      };
+    }
+
+    case 'hs3_int_yvol_len': {
+      const mode = (params.mode as string) || 'yvol';
+      if (mode === 'length') {
+        const a = randInt(rng, 2, 5);
+        return {
+          prompt: `媒介変数表示 $x = ${a}\\cos t, \\ y = ${a}\\sin t \\ (0 \\le t \\le \\pi)$ で表される曲線の長さ $L$ を求めよ。`,
+          answer: `$\\displaystyle L = \\int_0^{\\pi} \\sqrt{(-${a}\\sin t)^2 + (${a}\\cos t)^2}\\,dt = ${a}\\pi$`,
+        };
+      }
+      const h = randInt(rng, 2, 5);
+      return {
+        prompt: `曲線 $y = x^2 \\ (x \\ge 0)$ と $y$ 軸および直線 $y = ${h}$ で囲まれた図形を $y$ 軸のまわりに1回転した体積 $V$ を求めよ。`,
+        answer: `$\\displaystyle V = \\pi \\int_0^{${h}} x^2\\,dy = \\pi \\int_0^{${h}} y\\,dy = ${fmtFrac(h * h, 2)}\\pi$`,
+      };
+    }
+
+    case 'univ_guided_multipart': {
+      const bank: GeneratedProblem[] = [
+        {
+          prompt: '【国公立二次・誘導大問】関数 $f(x) = \\frac{\\log x}{x} \\ (x > 0)$ について、(1) $f\'(x) = 0$ を解け。(2) $f(x)$ の最大値を求めよ。(3) $e^{\\pi}$ と $\\pi^e$ の大小を比較せよ。',
+          answer: '(1) $x = e$ (2) 最大値 $\\frac{1}{e}$（$x=e$） (3) $f(e) > f(\\pi)$ より $\\frac{1}{e} > \\frac{\\log \\pi}{\\pi} \\implies e^{\\pi} > \\pi^e$',
+        },
+        {
+          prompt: '【国公立二次・誘導大問】$n$ を自然数とするとき、(1) $n^3 - n$ を因数分解せよ。(2) $n^3 - n$ が $6$ の倍数であることを示せ。',
+          answer: '(1) $(n-1)n(n+1)$ (2) 連続する3整数の積なので2の倍数かつ3の倍数となり、$2$ と $3$ は互いに素だから $6$ の倍数',
+        },
+        {
+          prompt: '【国公立二次・誘導大問】座標空間の3点 $\\mathrm{A}(1,0,0), \\ \\mathrm{B}(0,1,0), \\ \\mathrm{C}(0,0,1)$ について、(1) $\\triangle\\mathrm{ABC}$ の面積を求めよ。(2) 原点 $\\mathrm{O}$ から平面 $\\mathrm{ABC}$ への距離を求めよ。',
+          answer: '(1) 1辺 $\\sqrt{2}$ の正三角形なので $S = \\frac{\\sqrt{3}}{2}$ (2) 四面体 $\\mathrm{OABC}$ の体積 $\\frac{1}{6} = \\frac{1}{3} S h$ より $h = \\frac{1}{\\sqrt{3}} = \\frac{\\sqrt{3}}{3}$',
+        },
+        {
+          prompt: '【国公立二次・誘導大問】曲線 $C: y = e^x$ について、(1) $C$ 上の点 $(t, e^t)$ における接線の方程式を求めよ。(2) 原点を通る接線の接点と方程式を求めよ。',
+          answer: '(1) $y = e^t(x - t + 1)$ (2) $(0,0)$ 代入より $t = 1$、接点 $(1, e)$、接線 $y = ex$',
+        },
+        {
+          prompt: '【国公立二次・誘導大問】数列 $a_1 = 1, \\ a_{n+1} = 2a_n + 3$ について、(1) $b_n = a_n + 3$ の満たす漸化式を求めよ。(2) $a_n$ の一般項を求めよ。(3) $\\sum_{k=1}^n a_k$ を求めよ。',
+          answer: '(1) $b_{n+1} = 2b_n, \\ b_1 = 4$ (2) $a_n = 2^{n+1} - 3$ (3) $4(2^n - 1) - 3n = 2^{n+2} - 3n - 4$',
+        },
+      ];
+      return pick(rng, bank);
+    }
+
     default:
       return null;
   }

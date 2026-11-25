@@ -974,6 +974,348 @@ export function getWorkedExampleForSpec(spec: MicroStepSpec): WorkedExample {
         answer: '$p_n = \\frac{1}{2}$',
       };
 
+    case 'hs1_cubic_expand_factor':
+      if (params.mode === 'decimal') {
+        return {
+          problem: '$\\sqrt{7}$ の整数部分と小数部分',
+          steps: [
+            '$2^2 = 4 < 7 < 9 = 3^2$ より $2 < \\sqrt{7} < 3$ なので、整数部分は $2$。',
+            '小数部分は元の数から整数部分を引いて $\\sqrt{7} - 2$。',
+          ],
+          answer: '整数部分 $2$、小数部分 $\\sqrt{7} - 2$',
+        };
+      }
+      if (params.mode === 'expand') {
+        return {
+          problem: '$(x + 2)^3$ を展開せよ。',
+          steps: [
+            '公式 $(a+b)^3 = a^3 + 3a^2b + 3ab^2 + b^3$ に $a=x, b=2$ を代入します。',
+            '$x^3 + 3x^2(2) + 3x(4) + 8 = x^3 + 6x^2 + 12x + 8$',
+          ],
+          answer: '$x^3 + 6x^2 + 12x + 8$',
+        };
+      }
+      return {
+        problem: '$x^3 + 8$ を因数分解せよ。',
+        steps: [
+          '$8 = 2^3$ なので公式 $a^3 + b^3 = (a+b)(a^2 - ab + b^2)$ を用います。',
+          '$(x + 2)(x^2 - 2x + 4)$',
+        ],
+        answer: '$(x + 2)(x^2 - 2x + 4)$',
+      };
+
+    case 'hs1_qf_root_loc':
+      return {
+        problem: '$x^2 - 4x + k = 0$ が異なる2つの正の解をもつ $k$ の範囲',
+        steps: [
+          '① 判別式：$D/4 = 4 - k > 0 \\implies k < 4$',
+          '② 軸：$x = 2 > 0$（常に成立）',
+          '③ 端点：$f(0) = k > 0$。①〜③を合わせて $0 < k < 4$。',
+        ],
+        answer: '$0 < k < 4$',
+      };
+
+    case 'hs1_stats_corr':
+      if (params.mode === 'transform') {
+        return {
+          problem: '平均 $5$・分散 $3$ の変量 $x$ を $y = 2x + 1$ に変換した平均と分散',
+          steps: [
+            '平均：$\\bar{y} = 2\\bar{x} + 1 = 2(5) + 1 = 11$',
+            '分散：$s_y^2 = 2^2 s_x^2 = 4 \\times 3 = 12$',
+          ],
+          answer: '平均 $11$、分散 $12$',
+        };
+      }
+      return {
+        problem: '$s_x = 4, \\ s_y = 5, \\ s_{xy} = 10$ のとき相関係数 $r$',
+        steps: [
+          '定義より $r = \\frac{s_{xy}}{s_x s_y} = \\frac{10}{4 \\times 5} = \\frac{1}{2}$',
+        ],
+        answer: '$\\displaystyle \\frac{1}{2}$',
+      };
+
+    case 'hsa_perm_comb_adv':
+      if (params.mode === 'same') {
+        return {
+          problem: 'Aが3個、Bが2個の計5文字を一列に並べる方法',
+          steps: [
+            '同じものを含む順列の公式より $\\frac{5!}{3!\\,2!} = \\frac{120}{6 \\times 2} = 10$',
+          ],
+          answer: '$10$ 通り',
+        };
+      }
+      if (params.mode === 'rep_comb') {
+        return {
+          problem: '3種類から重複を許して4個選ぶ組合せ $_3\\mathrm{H}_4$',
+          steps: [
+            '公式 $_n\\mathrm{H}_r = _{n+r-1}\\mathrm{C}_r$ より $_6\\mathrm{C}_4 = _6\\mathrm{C}_2 = 15$',
+          ],
+          answer: '$15$ 通り',
+        };
+      }
+      return {
+        problem: '5人が円形に座る座り方',
+        steps: [
+          '1人を固定して残り4人を並べるので $(5-1)! = 4! = 24$ 通り。',
+        ],
+        answer: '$24$ 通り',
+      };
+
+    case 'hsa_cond_prob_exp':
+      if (params.mode === 'exp') {
+        return {
+          problem: 'さいころで6が出たら600円、他は0円の期待値',
+          steps: [
+            '期待値 $E(X) = 600 \\times \\frac{1}{6} + 0 \\times \\frac{5}{6} = 100$',
+          ],
+          answer: '$100$ 円',
+        };
+      }
+      return {
+        problem: '赤3白2から戻さず2回取り出し、1回目が赤のとき2回目も赤の条件付き確率',
+        steps: [
+          '1回目に赤を1個取った後、袋には赤2・白2の計4個が残っています。',
+          'よって2回目も赤を引く確率は $\\frac{2}{4} = \\frac{1}{2}$。',
+        ],
+        answer: '$\\displaystyle \\frac{1}{2}$',
+      };
+
+    case 'hsa_ceva_menelaus':
+      return {
+        problem: '$\\frac{\\mathrm{AR}}{\\mathrm{RB}}=\\frac{2}{3}, \\ \\frac{\\mathrm{BP}}{\\mathrm{PC}}=\\frac{1}{2}$ のとき $\\frac{\\mathrm{CQ}}{\\mathrm{QA}}$',
+        steps: [
+          '$\\frac{2}{3} \\cdot \\frac{1}{2} \\cdot \\frac{\\mathrm{CQ}}{\\mathrm{QA}} = 1 \\implies \\frac{1}{3} \\cdot \\frac{\\mathrm{CQ}}{\\mathrm{QA}} = 1$',
+          'よって $\\frac{\\mathrm{CQ}}{\\mathrm{QA}} = 3$（比は $3:1$）。',
+        ],
+        answer: '$3$（$3:1$）',
+      };
+
+    case 'hsa_euclid_mod':
+      if (params.mode === 'mod') {
+        return {
+          problem: '$8^5$ を $7$ で割った余り',
+          steps: [
+            '$8 \\equiv 1 \\pmod 7$ なので、両辺を5乗して $8^5 \\equiv 1^5 = 1 \\pmod 7$',
+          ],
+          answer: '余り $1$',
+        };
+      }
+      return {
+        problem: '一次不定方程式 $3x + 2y = 1$ の整数解',
+        steps: [
+          '特殊解 $(1, -1)$ を元の式から引くと $3(x-1) = -2(y+1)$。',
+          '$3$ と $2$ は互いに素なので $x - 1 = 2k, \\ y + 1 = -3k$（$k$ は整数）。',
+        ],
+        answer: '$x = 2k + 1, \\ y = -3k - 1$',
+      };
+
+    case 'hs2_identity_amgm':
+      if (params.mode === 'identity') {
+        return {
+          problem: '$2x^2 + 3x + 1 = p(x-1)^2 + q(x-1) + r$ の係数決定',
+          steps: [
+            '右辺を展開すると $px^2 + (q-2p)x + (p-q+r)$。',
+            '係数を比較して $p = 2, \\ q = 7, \\ r = 6$。',
+          ],
+          answer: '$p = 2, \\ q = 7, \\ r = 6$',
+        };
+      }
+      return {
+        problem: '$x > 0$ のとき $x + \\frac{9}{x}$ の最小値',
+        steps: [
+          '$x > 0, \\frac{9}{x} > 0$ より相加・相乗平均の関係から $x + \\frac{9}{x} \\ge 2\\sqrt{x \\cdot \\frac{9}{x}} = 6$。',
+          '等号成立は $x = \\frac{9}{x}$ かつ $x > 0$ すなわち $x = 3$ のとき。',
+        ],
+        answer: '最小値 $6$（$x = 3$）',
+      };
+
+    case 'hs2_circle_region':
+      if (params.mode === 'lp') {
+        return {
+          problem: '$x \\ge 0, y \\ge 0, x+y \\le 3$ で $k = 2x + y$ の最大値',
+          steps: [
+            '領域は3点 $(0,0), (3,0), (0,3)$ を頂点とする三角形です。',
+            '各頂点で $2x+y$ を調べると $(3,0)$ のとき最大値 $6$。',
+          ],
+          answer: '最大値 $6$',
+        };
+      }
+      return {
+        problem: '円 $x^2 + y^2 = 25$ 上の点 $(3, 4)$ における接線',
+        steps: [
+          '円の接線の公式 $x_1 x + y_1 y = r^2$ に $(3, 4)$ を代入します。',
+          '$3x + 4y = 25$',
+        ],
+        answer: '$3x + 4y = 25$',
+      };
+
+    case 'hs2_trig_eq_log_digits':
+      if (params.mode === 'trig_eq') {
+        return {
+          problem: '$0 \\le \\theta < 2\\pi$ で $\\sin\\theta = \\frac{1}{2}$ を解け。',
+          steps: [
+            '単位円上で $y$ 座標が $\\frac{1}{2}$ となる動径の角を読み取ります。',
+            '$\\theta = \\frac{\\pi}{6}, \\ \\frac{5}{6}\\pi$',
+          ],
+          answer: '$\\displaystyle \\theta = \\frac{\\pi}{6}, \\ \\frac{5}{6}\\pi$',
+        };
+      }
+      return {
+        problem: '$2^{10}$ の桁数（$\\log_{10} 2 = 0.3010$）',
+        steps: [
+          '$\\log_{10} 2^{10} = 10 \\times 0.3010 = 3.010$',
+          '$3 \\le \\log_{10} 2^{10} < 4$ より $10^3 \\le 2^{10} < 10^4$ なので $4$ 桁。',
+        ],
+        answer: '$4$ 桁',
+      };
+
+    case 'hsb_diff_group_induct':
+      if (params.mode === 'group') {
+        return {
+          problem: '第 $n$ 群に $n$ 個の自然数が入るとき、第 $5$ 群の最初の数',
+          steps: [
+            '第 $4$ 群までの個数の合計は $1 + 2 + 3 + 4 = 10$ 個。',
+            'よって第 $5$ 群の最初は $10 + 1 = 11$。',
+          ],
+          answer: '$11$',
+        };
+      }
+      return {
+        problem: '初項 $a_1 = 2$、階差数列 $b_n = 2n$ の一般項 $a_n$',
+        steps: [
+          '$n \\ge 2$ のとき $a_n = 2 + \\sum_{k=1}^{n-1} 2k = 2 + n(n-1) = n^2 - n + 2$',
+          '$n = 1$ を代入しても $1 - 1 + 2 = 2 = a_1$ で成り立ちます。',
+        ],
+        answer: '$a_n = n^2 - n + 2$',
+      };
+
+    case 'hsb_normal_conf':
+      return {
+        problem: '$N(60, 5^2)$ で $X = 70$ のときの標準化 $Z$',
+        steps: [
+          '公式 $Z = \\frac{X - m}{\\sigma}$ に代入します：$Z = \\frac{70 - 60}{5} = 2$',
+        ],
+        answer: '$Z = 2$',
+      };
+
+    case 'hsc_pos_vec_space':
+      if (params.mode === 'space_foot') {
+        return {
+          problem: '点 $\\mathrm{P}(2, 3, 4)$ から $xy$ 平面への垂線の足 $\\mathrm{H}$ と長さ $\\mathrm{PH}$',
+          steps: [
+            '$xy$ 平面上では $z = 0$ なので $\\mathrm{H}(2, 3, 0)$。',
+            '距離は $z$ 座標の絶対値で $\\mathrm{PH} = 4$。',
+          ],
+          answer: '$\\mathrm{H}(2, 3, 0)$、$\\mathrm{PH} = 4$',
+        };
+      }
+      return {
+        problem: '線分 $\\mathrm{AB}$ を $2:3$ に内分する点の位置ベクトル',
+        steps: [
+          '内分公式 $\\frac{n\\vec{a} + m\\vec{b}}{m+n}$ に $m=2, n=3$ を代入します。',
+          '$\\displaystyle \\frac{3\\vec{a} + 2\\vec{b}}{5}$',
+        ],
+        answer: '$\\displaystyle \\frac{3\\vec{a} + 2\\vec{b}}{5}$',
+      };
+
+    case 'hsc_hyperbola_polar':
+      if (params.mode === 'polar') {
+        return {
+          problem: '極座標 $\\left(4, \\frac{\\pi}{3}\\right)$ の直交座標',
+          steps: [
+            '$x = 4\\cos\\frac{\\pi}{3} = 2, \\ y = 4\\sin\\frac{\\pi}{3} = 2\\sqrt{3}$',
+          ],
+          answer: '$(2, \\ 2\\sqrt{3})$',
+        };
+      }
+      return {
+        problem: '双曲線 $\\frac{x^2}{9} - \\frac{y^2}{4} = 1$ の漸近線',
+        steps: [
+          '$a = 3, b = 2$ より漸近線は $y = \\pm \\frac{b}{a}x = \\pm \\frac{2}{3}x$',
+        ],
+        answer: '$\\displaystyle y = \\pm \\frac{2}{3}x$',
+      };
+
+    case 'hsc_complex_geom':
+      return {
+        problem: '$|z - 1| = |z - 3i|$ が表す図形',
+        steps: [
+          '点 $z$ から2点 $1$ と $3i$ までの距離が等しいことを意味します。',
+          'よって2点を結ぶ線分の垂直二等分線です。',
+        ],
+        answer: '2点 $1, 3i$ を結ぶ線分の垂直二等分線',
+      };
+
+    case 'hs3_lim_squeeze_cont':
+      return {
+        problem: '$\\displaystyle \\lim_{x \\to \\infty} \\frac{\\sin 2x}{x}$',
+        steps: [
+          '$-1 \\le \\sin 2x \\le 1$ より $x > 0$ で $-\\frac{1}{x} \\le \\frac{\\sin 2x}{x} \\le \\frac{1}{x}$。',
+          '$x \\to \\infty$ で両端が $0$ に収束するので、はさみうちの原理より $0$。',
+        ],
+        answer: '$0$',
+      };
+
+    case 'hs3_diff_quot_inflect':
+      if (params.mode === 'ineq') {
+        return {
+          problem: '$x > 0$ で $e^x > 1 + x$ の証明手順',
+          steps: [
+            '$f(x) = e^x - 1 - x$ とおくと $f(0) = 0$。',
+            '$f\'(x) = e^x - 1 > 0 \\ (x > 0)$ より $f(x)$ は単調増加なので $f(x) > f(0) = 0$。',
+          ],
+          answer: '$e^x > 1 + x$（証明完了）',
+        };
+      }
+      if (params.mode === 'inflect') {
+        return {
+          problem: '$y = x^3 - 3x^2 + 1$ の変曲点の $x$ 座標',
+          steps: [
+            '$y\' = 3x^2 - 6x, \\ y\'\' = 6x - 6 = 6(x - 1)$。',
+            '$x = 1$ の前後で $y\'\'$ の符号が変わるので変曲点は $x = 1$。',
+          ],
+          answer: '$x = 1$',
+        };
+      }
+      return {
+        problem: '$\\displaystyle y = \\frac{x}{x + 2}$ の微分',
+        steps: [
+          '商の微分より $y\' = \\frac{1\\cdot(x+2) - x\\cdot 1}{(x+2)^2} = \\frac{2}{(x+2)^2}$',
+        ],
+        answer: '$\\displaystyle y\' = \\frac{2}{(x+2)^2}$',
+      };
+
+    case 'hs3_int_yvol_len':
+      if (params.mode === 'length') {
+        return {
+          problem: '$x = 2\\cos t, y = 2\\sin t \\ (0 \\le t \\le \\pi)$ の曲線の長さ',
+          steps: [
+            '$\\sqrt{(x\'(t))^2 + (y\'(t))^2} = \\sqrt{4\\sin^2 t + 4\\cos^2 t} = 2$',
+            '$L = \\int_0^{\\pi} 2\\,dt = 2\\pi$',
+          ],
+          answer: '$2\\pi$',
+        };
+      }
+      return {
+        problem: '$y = x^2 \\ (x \\ge 0)$ と $y$ 軸・$y = 3$ で囲まれた図形の $y$ 軸回転体の体積',
+        steps: [
+          '$x^2 = y$ なので $V = \\pi \\int_0^3 x^2\\,dy = \\pi \\int_0^3 y\\,dy$',
+          '$\\displaystyle \\pi \\left[\\frac{1}{2}y^2\\right]_0^3 = \\frac{9}{2}\\pi$',
+        ],
+        answer: '$\\displaystyle \\frac{9}{2}\\pi$',
+      };
+
+    case 'univ_guided_multipart':
+      return {
+        problem: '$f(x) = \\frac{\\log x}{x} \\ (x > 0)$ の最大値と $e^{\\pi}, \\pi^e$ の大小',
+        steps: [
+          '(1) 商の微分より $f\'(x) = \\frac{1 - \\log x}{x^2} = 0 \\implies x = e$',
+          '(2) 増減表より $x = e$ で最大値 $\\frac{1}{e}$。',
+          '(3) $f(e) > f(\\pi)$ より $\\frac{1}{e} > \\frac{\\log \\pi}{\\pi}$、両辺に $e\\pi > 0$ を掛けて $\\pi > e\\log\\pi = \\log \\pi^e \\implies e^{\\pi} > \\pi^e$。',
+        ],
+        answer: '$e^{\\pi} > \\pi^e$',
+      };
+
     default:
       return {
         problem: 'このレベルの標準例題',

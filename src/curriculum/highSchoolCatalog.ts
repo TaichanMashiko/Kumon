@@ -189,6 +189,33 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       paramsFn: (i) => ({ mode: i < 2 ? 'sine' : i < 4 ? 'cosine' : 'area' }),
     }),
     ...expandSeries({
+      prefix: 'H1-CUBIC',
+      stage: '高校 数学Ⅰ',
+      category: '1章 数と式',
+      baseTitle: '3次式の展開・因数分解・実数の整数/小数部分',
+      subLabels: ['3次式の展開・基本', '3次式の因数分解・基本', '整数部分と小数部分・標準'],
+      questionCount: 10,
+      explanationFn: (i) =>
+        i === 0
+          ? '3乗の展開公式 $(x+a)^3 = x^3 + 3ax^2 + 3a^2x + a^3$ を用います。'
+          : i === 1
+          ? '3乗の和の因数分解公式 **$x^3 + a^3 = (x+a)(x^2 - ax + a^2)$** を用います。'
+          : '$m < \\sqrt{n} < m+1$ となる整数 $m$ を見つけると、整数部分は $m$、小数部分は $\\sqrt{n} - m$ です。',
+      template: 'hs1_cubic_expand_factor',
+      paramsFn: (i) => ({ mode: i === 0 ? 'expand' : i === 1 ? 'factor' : 'decimal' }),
+    }),
+    ...expandSeries({
+      prefix: 'H1-QF-LOC',
+      stage: '高校 数学Ⅰ',
+      category: '3章 2次関数',
+      baseTitle: '2次方程式の解の配置（軸・判別式・端点）',
+      subLabels: ['2解とも正・基本', '2解とも正・入試演習'],
+      questionCount: 8,
+      explanation:
+        '解の配置は「①判別式 $D$」「②軸の位置」「③境界（端点）の符号 $f(0)$」の3条件をすべて連立して解きます。',
+      template: 'hs1_qf_root_loc',
+    }),
+    ...expandSeries({
       prefix: 'H1-STAT',
       stage: '高校 数学Ⅰ',
       category: '5章 データの分析',
@@ -198,6 +225,20 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       explanation:
         '各値と平均値の差（偏差）を2乗し、その平均をとったものが分散 $s^2$ です。',
       template: 'hs1_stats',
+    }),
+    ...expandSeries({
+      prefix: 'H1-CORR',
+      stage: '高校 数学Ⅰ',
+      category: '5章 データの分析',
+      baseTitle: '相関係数・共分散・変量変換',
+      subLabels: ['相関係数・基本', '変量変換(y=ax+b)・入試演習'],
+      questionCount: 10,
+      explanationFn: (i) =>
+        i === 0
+          ? '相関係数は **$r = \\frac{s_{xy}}{s_x s_y}$**（共分散をそれぞれの標準偏差の積で割った値）で求めます。'
+          : '$y = ax + b$ と変換すると、平均は $a\\bar{x} + b$、分散は **$a^2 s_x^2$**（$b$ には無関係）になります。',
+      template: 'hs1_stats_corr',
+      paramsFn: (i) => ({ mode: i === 0 ? 'corr' : 'transform' }),
     })
   );
 
@@ -258,6 +299,62 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
           : '10進法から2進法へは、商が $0$ になるまで **$2$ で割り続け、出た余りを下から順に並べる** と求まります。',
       template: 'hsa_int_diophantine',
       paramsFn: (i) => ({ mode: i >= 2 ? 'base' : 'divisors' }),
+    }),
+    ...expandSeries({
+      prefix: 'HA-PC-ADV',
+      stage: '高校 数学A',
+      category: '1章 場合の数と確率',
+      baseTitle: '円順列・同じものを含む順列・重複組合せ',
+      subLabels: ['円順列・基本', '同じものを含む順列・標準', '重複組合せ(H)・入試演習'],
+      questionCount: 10,
+      explanationFn: (i) =>
+        i === 0
+          ? '$n$ 個の円順列は1つを固定して **$(n-1)!$** 通りで求めます。'
+          : i === 1
+          ? '$p$ 個・$q$ 個の同じものを含む順列は **$\\frac{(p+q)!}{p!\\,q!}$** で求めます。'
+          : '$n$ 種類から重複を許して $r$ 個選ぶ組合せは **$_n\\mathrm{H}_r = _{n+r-1}\\mathrm{C}_r$** です。',
+      template: 'hsa_perm_comb_adv',
+      paramsFn: (i) => ({ mode: i === 0 ? 'circle' : i === 1 ? 'same' : 'rep_comb' }),
+    }),
+    ...expandSeries({
+      prefix: 'HA-COND',
+      stage: '高校 数学A',
+      category: '1章 場合の数と確率',
+      baseTitle: '条件付き確率と期待値',
+      subLabels: ['条件付き確率・基本', '条件付き確率・入試演習', '期待値・基本', '期待値・入試演習'],
+      questionCount: 10,
+      explanationFn: (i) =>
+        i < 2
+          ? '事象 $A$ が起こったもとで $B$ が起こる条件付き確率は **$P_A(B) = \\frac{P(A\\cap B)}{P(A)}$** で求めます。'
+          : '期待値は各値とそれが起こる確率の積の和 **$E(X) = \\sum x_i p_i$** で求めます。',
+      template: 'hsa_cond_prob_exp',
+      paramsFn: (i) => ({ mode: i < 2 ? 'cond' : 'exp' }),
+    }),
+    ...expandSeries({
+      prefix: 'HA-CEVA',
+      stage: '高校 数学A',
+      category: '2章 図形の性質',
+      baseTitle: 'チェバの定理・メネラウスの定理',
+      subLabels: ['チェバの定理・基本', 'メネラウスの定理・入試演習'],
+      questionCount: 10,
+      explanation:
+        '三角形の頂点と分点を交互に一周する積 **$\\frac{\\mathrm{AR}}{\\mathrm{RB}}\\cdot\\frac{\\mathrm{BP}}{\\mathrm{PC}}\\cdot\\frac{\\mathrm{CQ}}{\\mathrm{QA}} = 1$** を立てて比を求めます。',
+      template: 'hsa_ceva_menelaus',
+      paramsFn: (i) => ({ mode: i === 0 ? 'ceva' : 'menelaus' }),
+    }),
+    ...expandSeries({
+      prefix: 'HA-EUCLID',
+      stage: '高校 数学A',
+      category: '3章 整数の性質',
+      baseTitle: '一次不定方程式と合同式（mod）',
+      subLabels: ['一次不定方程式・基本', '一次不定方程式・入試演習', '合同式と余り・入試演習'],
+      questionCount: 8,
+      explanationFn: (i) =>
+        i < 2
+          ? '特殊解 $(x_0, y_0)$ を1組見つけて元の式から引き、$a(x-x_0) = -b(y-y_0)$ として互いに素の性質から一般解を求めます。'
+          : '合同式 $a \\equiv b \\pmod m$ を用いると、高次の累乗を割った余りを高速に求められます。',
+      template: 'hsa_euclid_mod',
+      paramsFn: (i) => ({ mode: i < 2 ? 'diophantine' : 'mod' }),
     })
   );
 
@@ -359,6 +456,48 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       explanation:
         '放物線 $y=(x-\\alpha)(x-\\beta)$ と $x$ 軸で囲まれた面積は $S = \\frac{1}{6}(\\beta-\\alpha)^3$ で高速かつ正確に求められます。',
       template: 'hs2_def_int_area',
+    }),
+    ...expandSeries({
+      prefix: 'H2-AMGM',
+      stage: '高校 数学Ⅱ',
+      category: '1章 式と証明',
+      baseTitle: '恒等式の係数決定・相加相乗平均の最小値',
+      subLabels: ['恒等式・基本', '相加相乗平均・基本', '相加相乗平均・入試演習'],
+      questionCount: 10,
+      explanationFn: (i) =>
+        i === 0
+          ? '両辺を展開して同じ次数の係数を比較する（係数比較法）か、具体的な値を代入して決定します。'
+          : '$a > 0, b > 0$ のとき **$a + b \\ge 2\\sqrt{ab}$**（等号成立 $a = b$）を用います。必ず等号成立条件を確認しましょう。',
+      template: 'hs2_identity_amgm',
+      paramsFn: (i) => ({ mode: i === 0 ? 'identity' : 'amgm' }),
+    }),
+    ...expandSeries({
+      prefix: 'H2-CIRCLE',
+      stage: '高校 数学Ⅱ',
+      category: '3章 図形と方程式',
+      baseTitle: '円の接線・軌跡と領域（線形計画法）',
+      subLabels: ['円の接線・基本', '円の接線・標準', '線形計画法・入試演習'],
+      questionCount: 10,
+      explanationFn: (i) =>
+        i < 2
+          ? '円 $x^2 + y^2 = r^2$ 上の点 $(x_1, y_1)$ における接線は **$x_1 x + y_1 y = r^2$** です。'
+          : '$k = ax + by$ とおいて直線が領域と共有点をもつときの切片の最大・最小を領域の頂点から求めます。',
+      template: 'hs2_circle_region',
+      paramsFn: (i) => ({ mode: i < 2 ? 'tangent' : 'lp' }),
+    }),
+    ...expandSeries({
+      prefix: 'H2-TRIG-LOG',
+      stage: '高校 数学Ⅱ',
+      category: '4・5章 三角方程式・常用対数',
+      baseTitle: '三角方程式・常用対数と桁数',
+      subLabels: ['三角方程式・基本', '常用対数と桁数・基本', '常用対数と桁数・入試演習'],
+      questionCount: 10,
+      explanationFn: (i) =>
+        i === 0
+          ? '単位円上で $\\sin\\theta$（$y$ 座標）または $\\cos\\theta$（$x$ 座標）が指定値になる角を $0 \\le \\theta < 2\\pi$ からすべて求めます。'
+          : '$\\log_{10} N$ の整数部分を $k$ とすると、$N$ は **$k + 1$ 桁** の整数です。',
+      template: 'hs2_trig_eq_log_digits',
+      paramsFn: (i) => ({ mode: i === 0 ? 'trig_eq' : 'digits' }),
     })
   );
 
@@ -410,6 +549,31 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       explanation:
         '二項分布 $B(n, p)$ に従う確率変数 $X$ について、$E(X) = np$、$V(X) = np(1-p)$ が成り立ちます。',
       template: 'hsb_binomial_dist',
+    }),
+    ...expandSeries({
+      prefix: 'HB-DIFF',
+      stage: '高校 数学B',
+      category: '1章 数列',
+      baseTitle: '階差数列と群数列',
+      subLabels: ['階差数列・基本', '群数列・基本', '群数列・入試演習'],
+      questionCount: 8,
+      explanationFn: (i) =>
+        i === 0
+          ? '階差数列 $\\{b_n\\}$ を用いると $n \\ge 2$ で $a_n = a_1 + \\sum_{k=1}^{n-1} b_k$。最後に $n=1$ の成立を確認します。'
+          : '第 $n$ 群の最初の項は、第 $n-1$ 群までに含まれる項数の総和に $+1$ して求めます。',
+      template: 'hsb_diff_group_induct',
+      paramsFn: (i) => ({ mode: i === 0 ? 'diff' : 'group' }),
+    }),
+    ...expandSeries({
+      prefix: 'HB-NORM',
+      stage: '高校 数学B',
+      category: '2章 統計的な推測',
+      baseTitle: '正規分布の標準化',
+      subLabels: ['標準化(Z)・基本', '標準化(Z)・入試演習'],
+      questionCount: 10,
+      explanation:
+        '$X$ が正規分布 $N(m, \\sigma^2)$ に従うとき、**$Z = \\frac{X - m}{\\sigma}$** は標準正規分布 $N(0, 1)$ に従います。',
+      template: 'hsb_normal_conf',
     })
   );
 
@@ -452,6 +616,45 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       explanation:
         '$z = r(\\cos\\theta + i\\sin\\theta)$ に対し、ド・モアブルの定理 $z^n = r^n(\\cos n\\theta + i\\sin n\\theta)$ を用いて高次累乗を計算します。',
       template: 'hsc_complex_polar',
+    }),
+    ...expandSeries({
+      prefix: 'HC-POS',
+      stage: '高校 数学C',
+      category: '1章 ベクトル',
+      baseTitle: '位置ベクトル（内分）と空間の垂線の足',
+      subLabels: ['内分の位置ベクトル・基本', '空間の垂線の足・入試演習'],
+      questionCount: 10,
+      explanationFn: (i) =>
+        i === 0
+          ? '線分 $\\mathrm{AB}$ を $m:n$ に内分する点の位置ベクトルは **$\\frac{n\\vec{a} + m\\vec{b}}{m+n}$** です。'
+          : '点 $(a,b,c)$ から $xy$ 平面への垂線の足は $z$ 座標を $0$ にした $(a,b,0)$、距離は $|c|$ です。',
+      template: 'hsc_pos_vec_space',
+      paramsFn: (i) => ({ mode: i === 0 ? 'pos' : 'space_foot' }),
+    }),
+    ...expandSeries({
+      prefix: 'HC-HYP',
+      stage: '高校 数学C',
+      category: '2章 平面上の曲線',
+      baseTitle: '双曲線の漸近線と極座標',
+      subLabels: ['双曲線の漸近線・基本', '極座標と直交座標・入試演習'],
+      questionCount: 10,
+      explanationFn: (i) =>
+        i === 0
+          ? '双曲線 $\\frac{x^2}{a^2} - \\frac{y^2}{b^2} = 1$ の漸近線は **$y = \\pm \\frac{b}{a}x$** です。'
+          : '極座標 $(r, \\theta)$ から直交座標へは **$x = r\\cos\\theta, \\ y = r\\sin\\theta$** で変換します。',
+      template: 'hsc_hyperbola_polar',
+      paramsFn: (i) => ({ mode: i === 0 ? 'hyperbola' : 'polar' }),
+    }),
+    ...expandSeries({
+      prefix: 'HC-CGEOM',
+      stage: '高校 数学C',
+      category: '3章 複素数平面',
+      baseTitle: '複素数平面の図形応用（円・垂直・共線）',
+      subLabels: ['図形と軌跡・基本', '図形と軌跡・入試演習'],
+      questionCount: 8,
+      explanation:
+        '$|z - \\alpha| = r$ は円、$|z - \\alpha| = |z - \\beta|$ は垂直二等分線、$\\frac{\\gamma-\\alpha}{\\beta-\\alpha}$ の実数/純虚数条件で共線・垂直を判定します。',
+      template: 'hsc_complex_geom',
     })
   );
 
@@ -516,6 +719,47 @@ export function buildHighSchoolCatalog(): MicroStepSpec[] {
       explanation:
         '曲線 $y = f(x) \\ (a \\le x \\le b)$ と $x$ 軸で囲まれた図形を $x$ 軸のまわりに1回転した体積は $V = \\pi \\int_a^b \\{f(x)\\}^2\\,dx$ です。',
       template: 'hs3_int_volume',
+    }),
+    ...expandSeries({
+      prefix: 'H3-SQUEEZE',
+      stage: '高校 数学Ⅲ',
+      category: '1章 関数と極限',
+      baseTitle: 'はさみうちの原理による極限評価',
+      subLabels: ['はさみうちの原理・基本', 'はさみうちの原理・入試演習'],
+      questionCount: 8,
+      explanation:
+        '$-1 \\le \\sin ax \\le 1$ を用いて不等式で挟み込み、両端の極限が一致することから極限値を決定します。',
+      template: 'hs3_lim_squeeze_cont',
+    }),
+    ...expandSeries({
+      prefix: 'H3-DIFF-ADV',
+      stage: '高校 数学Ⅲ',
+      category: '2・3章 微分の応用',
+      baseTitle: '商の微分・変曲点・不等式の証明',
+      subLabels: ['商の微分・基本', '変曲点と凹凸・標準', '微分による不等式証明・入試演習'],
+      questionCount: 8,
+      explanationFn: (i) =>
+        i === 0
+          ? '商の微分公式 $\\left(\\frac{f}{g}\\right)\' = \\frac{f\'g - fg\'}{g^2}$ を正確に適用します。'
+          : i === 1
+          ? '第2次導関数 $y\'\' = 0$ の前後で $y\'\'$ の符号が変わる点が変曲点です。'
+          : '(左辺)$-$(右辺) $= f(x)$ とおき、端点での値と $f\'(x)$ の符号から単調性を示します。',
+      template: 'hs3_diff_quot_inflect',
+      paramsFn: (i) => ({ mode: i === 0 ? 'quot' : i === 1 ? 'inflect' : 'ineq' }),
+    }),
+    ...expandSeries({
+      prefix: 'H3-YVOL',
+      stage: '高校 数学Ⅲ',
+      category: '4章 積分とその応用',
+      baseTitle: 'y軸回転体の体積と曲線の長さ',
+      subLabels: ['y軸回転体の体積・基本', '曲線の長さ・入試演習'],
+      questionCount: 8,
+      explanationFn: (i) =>
+        i === 0
+          ? '$y$ 軸回転体の体積は **$V = \\pi \\int_c^d x^2\\,dy$** として $x^2$ を $y$ の式で表して積分します。'
+          : '媒介変数表示 $(x(t), y(t))$ の曲線の長さは **$L = \\int_\\alpha^\\beta \\sqrt{(x\'(t))^2 + (y\'(t))^2}\\,dt$** です。',
+      template: 'hs3_int_yvol_len',
+      paramsFn: (i) => ({ mode: i === 0 ? 'yvol' : 'length' }),
     })
   );
 

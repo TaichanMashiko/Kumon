@@ -10,6 +10,7 @@
     "patch": "node scripts/patch-curriculum.mjs",
     "patch:dry-run": "node scripts/patch-curriculum.mjs --dry-run",
     "audit:curriculum": "node scripts/audit-curriculum.mjs",
+    "triage:feedback": "node scripts/triage-feedback.mjs",
     "evolve:weekly": "node scripts/weekly-curriculum-evolution.mjs"
   },
   "dependencies": {

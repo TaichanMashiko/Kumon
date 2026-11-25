@@ -152,6 +152,81 @@ export function buildUniversityExamCatalog(): MicroStepSpec[] {
         '$\\sqrt{a^2 - x^2}$ を含む定積分では $x = a\\sin\\theta$（$dx = a\\cos\\theta\\,d\\theta$）と置換し、積分区間も $0 \\to \\frac{\\pi}{2}$ に変換して半角公式で計算します。',
       template: 'univ_trig_sub_int',
     },
+    {
+      id: 'UNIV-LOC-001',
+      stage: '大学入試（茨城大・筑波大）',
+      category: '二次対策：解の配置・領域・整数論証（全国国公立頻出）',
+      title: '2次方程式の解の配置（軸・判別式・端点の3条件）',
+      questionCount: 6,
+      kumonRank: 'M',
+      remediationIds: ['H1-QF-LOC-001', 'H1-QF-DISC-001', 'H1-QF-SQ-001'],
+      explanation:
+        '全国の地方国公立〜中堅国公立で定番の「解の配置」は、判別式・軸・端点の3条件を漏れなく記述して連立します。',
+      template: 'hs1_qf_root_loc',
+    },
+    {
+      id: 'UNIV-INT-001',
+      stage: '大学入試（茨城大・筑波大）',
+      category: '二次対策：解の配置・領域・整数論証（全国国公立頻出）',
+      title: '一次不定方程式と合同式による整数論証',
+      questionCount: 6,
+      kumonRank: 'N',
+      remediationIds: ['HA-EUCLID-001', 'HA-INT-001', 'E5-GCD-001'],
+      explanation:
+        '東北大・一橋大・九大・秋田大・愛媛大などで頻出の整数分野。「互いに素」の明記と合同式の正確な運用が減点回避の鍵です。',
+      template: 'hsa_euclid_mod',
+      params: { mode: 'diophantine' },
+    },
+    {
+      id: 'UNIV-LP-001',
+      stage: '大学入試（茨城大・筑波大）',
+      category: '二次対策：解の配置・領域・整数論証（全国国公立頻出）',
+      title: '軌跡と領域・線形計画法による最大・最小',
+      questionCount: 6,
+      kumonRank: 'N',
+      remediationIds: ['H2-CIRCLE-003', 'H2-GEOM-001', 'J2-FUNC-1-001'],
+      explanation:
+        '岡山大・横浜国大・東大・京大で頻出の「領域と最大最小」。境界を含むかどうかの明記と頂点の比較を丁寧に記述します。',
+      template: 'hs2_circle_region',
+      params: { mode: 'lp' },
+    },
+    {
+      id: 'UNIV-M3-003',
+      stage: '大学入試（茨城大・筑波大）',
+      category: '二次対策：数Ⅲ微積分（全国国公立理系頻出）',
+      title: '微分による不等式証明・y軸回転体・曲線の長さ',
+      questionCount: 6,
+      kumonRank: 'O',
+      remediationIds: ['H3-DIFF-ADV-003', 'H3-YVOL-001', 'H3-INT-VOL-001'],
+      explanation:
+        '信州大・千葉大・神戸大・京都工芸繊維大など全国理系二次で最頻出の「$f(x) > 0$ の単調性証明」「$y$ 軸回転体」「曲線の長さ」を仕上げます。',
+      template: 'hs3_int_yvol_len',
+      params: { mode: 'length' },
+    },
+    {
+      id: 'UNIV-MULTI-001',
+      stage: '大学入試（茨城大・筑波大）',
+      category: '二次総合：全国国公立 誘導付き大問（記述減点チェック）',
+      title: '誘導付き国公立二次大問（(1)→(2)→(3) 総合演習・標準）',
+      questionCount: 5,
+      kumonRank: 'O',
+      remediationIds: ['UNIV-DIFF-001', 'UNIV-VEC-001', 'UNIV-INT-001'],
+      explanation:
+        '実際の国公立二次試験と同じ「(1)の結果を(2)(3)に活かす誘導形式」です。答えだけでなく、増減表・互いに素・$n=1$ の確認など記述の減点ポイントまで自己点検しましょう。',
+      template: 'univ_guided_multipart',
+    },
+    {
+      id: 'UNIV-MULTI-002',
+      stage: '大学入試（茨城大・筑波大）',
+      category: '二次総合：全国国公立 誘導付き大問（記述減点チェック）',
+      title: '誘導付き国公立二次大問（(1)→(2)→(3) 総合演習・仕上げ）',
+      questionCount: 5,
+      kumonRank: 'O',
+      remediationIds: ['UNIV-MULTI-001', 'UNIV-M3-001', 'UNIV-SEQ-002'],
+      explanation:
+        '茨城大・筑波大をはじめ全国50校以上の国公立二次試験で合否を分ける融合大問の最終仕上げです。',
+      template: 'univ_guided_multipart',
+    },
   ];
 
   return specs;
