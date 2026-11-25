@@ -24,6 +24,64 @@ function countUnescapedDollars(text) {
   return matches ? matches.length : 0;
 }
 
+/**
+ * 数学的検算チェッカー（生成された問題文と解答の数式・数値を独立に再計算して照合）
+ */
+function verifyMathAnswer(prompt, answer) {
+  const cleanP = String(prompt || '').replace(/\$/g, '').trim();
+  const cleanA = String(answer || '').replace(/\$/g, '').trim();
+  if (!cleanA) return '解答が空です';
+
+  // 1. 基本四則計算: "a + b =", "a - b =", "a × b =", "a ÷ b ="
+  const arithMatch = cleanP.match(/^(-?\d+(?:\.\d+)?)\s*([+\-×÷])\s*(-?\d+(?:\.\d+)?)\s*=$/);
+  if (arithMatch) {
+    const a = Number(arithMatch[1]);
+    const op = arithMatch[2];
+    const b = Number(arithMatch[3]);
+    if (op === '÷' && cleanA.includes('あまり')) {
+      const remMatch = cleanA.match(/^(\d+)\s*あまり\s*(\d+)$/);
+      if (!remMatch) return `余り形式が不正: ${cleanA}`;
+      const q = Number(remMatch[1]);
+      const r = Number(remMatch[2]);
+      if (q * b + r !== a || r < 0 || r >= b) {
+        return `割り算(余り)検算不一致: ${a} ÷ ${b} ≠ ${q} あまり ${r}`;
+      }
+      return null;
+    }
+    const ansNum = Number(cleanA);
+    if (!Number.isNaN(ansNum)) {
+      let expected;
+      if (op === '+') expected = a + b;
+      else if (op === '-') expected = a - b;
+      else if (op === '×') expected = a * b;
+      else if (op === '÷') expected = a / b;
+      if (Math.abs(expected - ansNum) > 1e-6) {
+        return `四則検算不一致: ${a} ${op} ${b} = ${expected} (解答: ${ansNum})`;
+      }
+    }
+  }
+
+  // 2. 1次方程式: "ax + b = c" に対して "x = ans" を代入検算
+  const linEq = cleanP.match(/^(-?\d*)x\s*([+\-])\s*(\d+)\s*=\s*(-?\d+)$/);
+  const xAns = cleanA.match(/^x\s*=\s*(-?\d+)$/);
+  if (linEq && xAns) {
+    const a = linEq[1] === '' ? 1 : linEq[1] === '-' ? -1 : Number(linEq[1]);
+    const b = (linEq[2] === '-' ? -1 : 1) * Number(linEq[3]);
+    const c = Number(linEq[4]);
+    const x = Number(xAns[1]);
+    if (a * x + b !== c) {
+      return `1次方程式代入検算不一致: ${a}*(${x}) + (${b}) ≠ ${c}`;
+    }
+  }
+
+  // 3. 平方完成・2次方程式・3次式などで明らかな記号破損（"+ -", "--" 等）がないか検査
+  if (/\+\s*-/.test(cleanA) && !cleanA.includes('\\pm')) {
+    return `符号表記の不整合("+ -"): ${cleanA}`;
+  }
+
+  return null;
+}
+
 async function main() {
   const tmpFile = path.join(os.tmpdir(), `mathstep-audit-${Date.now()}.mjs`);
   await build({
@@ -121,6 +179,10 @@ async function main() {
         }
         if (countUnescapedDollars(prob.answer) % 2 !== 0) {
           errors.push(`[${spec.id}:${verName}#${pIdx + 1}] 解答の $ 不整合: ${prob.answer}`);
+        }
+        const mathErr = verifyMathAnswer(prob.prompt, prob.answer);
+        if (mathErr) {
+          errors.push(`[${spec.id}:${verName}#${pIdx + 1}] ${mathErr}`);
         }
       });
     }

@@ -28,6 +28,7 @@ import type {
 import { AiTutorPanel } from './AiTutorPanel';
 import { MarkdownMath } from './MarkdownMath';
 import { RemediationDiagnosisModal } from './RemediationDiagnosisModal';
+import { StudentAvatarCard } from './StudentAvatarCard';
 
 interface StudentDashboardProps {
   user: UserAccount;
@@ -51,6 +52,7 @@ interface StudentDashboardProps {
 }
 
 export function StudentDashboard({
+  user,
   progress,
   onRateClarity,
   onAddConfusionNote,
@@ -230,8 +232,36 @@ export function StudentDashboard({
     showToast('メモを記録しました');
   };
 
+  const latestTeacherComment = useMemo(() => {
+    return (
+      progress.approvals.find(
+        (a) => a.mode === 'teacher' && typeof a.comment === 'string' && a.comment.trim().length > 0
+      ) ?? null
+    );
+  }, [progress.approvals]);
+
   return (
     <div className="mx-auto max-w-4xl px-4 pt-6 pb-24 sm:px-6">
+      {/* Student Growth Avatar & Effort XP Card */}
+      <StudentAvatarCard studentName={user.name} progress={progress} />
+
+      {/* Latest Teacher Comment Card (Visible directly to student!) */}
+      {latestTeacherComment && (
+        <div className="mb-5 rounded-xl border border-teal-200 bg-teal-50/70 px-4 py-3.5 shadow-xs">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-bold text-teal-900">
+            <span>先生からのメッセージ</span>
+            <span className="font-normal text-teal-800/70">
+              {new Date(latestTeacherComment.approvedAt).toLocaleString('ja-JP')}（
+              {latestTeacherComment.passed ? '合格' : '再挑戦'}・正答率{' '}
+              {latestTeacherComment.accuracyPercent}%）
+            </span>
+          </div>
+          <p className="mt-1.5 text-sm font-medium leading-relaxed text-slate-800">
+            「{latestTeacherComment.comment}」
+          </p>
+        </div>
+      )}
+
       {/* Transition Notification Banner (Prevents missing worksheet switches!) */}
       {transitionBanner && (
         <div

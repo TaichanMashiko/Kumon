@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, CornerUpLeft, Download } from 'lucide-react';
+import { Check, CornerUpLeft, Download, Minus, Plus } from 'lucide-react';
 import {
   ALL_MICRO_STEPS,
   getRemediationSteps,
@@ -61,9 +61,18 @@ export function TeacherDashboard({
   const [assignStepId, setAssignStepId] = useState<string>(
     currentSummary?.id ?? ALL_MICRO_STEPS[0].id
   );
-  const [accuracyPercent, setAccuracyPercent] = useState<number>(90);
+  const currentQuestionCount = currentSummary
+    ? ALL_MICRO_STEPS[currentSummary.index]?.questionCount ?? 10
+    : 10;
+  const [correctCount, setCorrectCount] = useState<number>(currentQuestionCount);
   const [comment, setComment] = useState<string>('');
   const [toast, setToast] = useState<string | null>(null);
+
+  const accuracyPercent = Math.round(
+    (Math.min(currentQuestionCount, Math.max(0, correctCount)) /
+      Math.max(1, currentQuestionCount)) *
+      100
+  );
 
   useEffect(() => {
     if (!selectedStudentId && students[0]) {
@@ -75,6 +84,8 @@ export function TeacherDashboard({
     if (currentSummary) {
       setSelectedStage(currentSummary.stage);
       setAssignStepId(currentSummary.id);
+      const qCount = ALL_MICRO_STEPS[currentSummary.index]?.questionCount ?? 10;
+      setCorrectCount(qCount);
     }
   }, [selectedStudentId, selectedProgress?.currentStepId]);
 
@@ -394,36 +405,73 @@ export function TeacherDashboard({
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div>
                         <label className="block text-xs font-semibold text-neutral-700">
-                          正答率：{accuracyPercent}%
+                          正解数：{correctCount} / 全{currentQuestionCount}問（正答率{' '}
+                          {accuracyPercent}%）
                         </label>
-                        <div className="mt-2 flex items-center gap-3">
-                          <input
-                            type="range"
-                            min={0}
-                            max={100}
-                            step={5}
-                            value={accuracyPercent}
-                            onChange={(e) => setAccuracyPercent(Number(e.target.value))}
-                            className="flex-1 accent-neutral-900"
-                          />
-                          <input
-                            type="number"
-                            min={0}
-                            max={100}
-                            value={accuracyPercent}
-                            onChange={(e) =>
-                              setAccuracyPercent(
-                                Math.min(100, Math.max(0, Number(e.target.value)))
-                              )
-                            }
-                            className="w-16 rounded-lg border border-neutral-200 px-2 py-1.5 text-center text-xs font-bold"
-                          />
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <div className="inline-flex items-center rounded-xl border border-neutral-200 bg-neutral-50 p-1">
+                            <button
+                              type="button"
+                              onClick={() => setCorrectCount((c) => Math.max(0, c - 1))}
+                              className="rounded-lg p-1.5 text-neutral-700 transition hover:bg-white"
+                              aria-label="正解数を1減らす"
+                            >
+                              <Minus className="h-3.5 w-3.5" />
+                            </button>
+                            <input
+                              type="number"
+                              min={0}
+                              max={currentQuestionCount}
+                              value={correctCount}
+                              onChange={(e) =>
+                                setCorrectCount(
+                                  Math.min(
+                                    currentQuestionCount,
+                                    Math.max(0, Number(e.target.value))
+                                  )
+                                )
+                              }
+                              className="w-12 bg-transparent text-center text-sm font-bold text-neutral-900 focus:outline-none"
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setCorrectCount((c) => Math.min(currentQuestionCount, c + 1))
+                              }
+                              className="rounded-lg p-1.5 text-neutral-700 transition hover:bg-white"
+                              aria-label="正解数を1増やす"
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+
+                          <div className="flex flex-wrap gap-1">
+                            {[
+                              { label: '全問正解', val: currentQuestionCount },
+                              { label: '1問ミス', val: Math.max(0, currentQuestionCount - 1) },
+                              { label: '2問ミス', val: Math.max(0, currentQuestionCount - 2) },
+                              { label: '半分', val: Math.floor(currentQuestionCount / 2) },
+                            ].map((preset) => (
+                              <button
+                                key={preset.label}
+                                type="button"
+                                onClick={() => setCorrectCount(preset.val)}
+                                className={`rounded-lg border px-2 py-1 text-[11px] font-semibold transition ${
+                                  correctCount === preset.val
+                                    ? 'border-neutral-900 bg-neutral-900 text-white'
+                                    : 'border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50'
+                                }`}
+                              >
+                                {preset.label}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       </div>
 
                       <div>
                         <label className="block text-xs font-semibold text-neutral-700">
-                          コメント（任意）
+                          コメント（任意・生徒画面の上部に表示されます）
                         </label>
                         <input
                           type="text"
