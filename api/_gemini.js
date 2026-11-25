@@ -7,11 +7,12 @@
 const RETRYABLE_STATUS = new Set([404, 429, 500, 502, 503, 504]);
 
 const DEFAULT_MODEL_CANDIDATES = [
-  'gemini-3.8-flash',
-  'gemini-3.5-flash-lite',
-  'gemini-3.7-flash',
   'gemini-3.5-flash',
-  'gemini-2.5-flash',
+  'gemini-3.7-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-3.6-flash',
+  'gemini-3.8-flash',
+  'gemini-3.1-flash-lite',
 ];
 
 function sleep(ms) {
@@ -81,7 +82,7 @@ export async function discoverLiveGeminiModels(apiKey, fetchImpl = fetch) {
         const short = name.replace(/^models\//, '');
         if (!short.startsWith('gemini-')) return false;
         // 音声・画像専用・埋め込み・極端な実験専用モデルを除外
-        if (/(embedding|imagen|tts|audio|live|veo|robotics|computer-use)/i.test(short)) {
+        if (/(embedding|imagen|image|tts|audio|live|veo|robotics|computer-use)/i.test(short)) {
           return false;
         }
         return true;

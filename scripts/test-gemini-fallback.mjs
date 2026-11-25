@@ -30,7 +30,7 @@ async function runTests() {
     const called = [];
     const mockFetch = async (url) => {
       called.push(url);
-      if (url.includes('gemini-3.8-flash')) {
+      if (url.includes('gemini-3.5-flash:') || url.includes('gemini-3.7-flash:')) {
         return makeRes(503, { error: { code: 503, status: 'UNAVAILABLE' } });
       }
       if (url.includes('gemini-3.5-flash-lite')) {
@@ -47,7 +47,7 @@ async function runTests() {
     );
     assert.equal(res.ok, true);
     assert.equal(res.model, 'gemini-3.5-flash-lite');
-    assert.equal(called.filter((u) => u.includes('gemini-3.8-flash')).length, 2);
+    assert.equal(called.filter((u) => u.includes('gemini-3.5-flash:')).length, 2);
     console.log('[PASS] Test 1: 503 retry + active fallback (gemini-3.5-flash-lite)');
   }
 
@@ -83,7 +83,7 @@ async function runTests() {
   {
     const mockFetch = async (url, init) => {
       if (init?.method === 'GET') return makeRes(200, { models: [] });
-      if (url.includes('gemini-3.8-flash')) return makeRes(503, 'high demand');
+      if (url.includes('gemini-3.5-flash:')) return makeRes(503, 'high demand');
       return makeRes(404, 'not found');
     };
     const res = await callGeminiRobust(
