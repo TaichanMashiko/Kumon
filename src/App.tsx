@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LoginView } from './components/LoginView';
 import { Navbar } from './components/Navbar';
-import { RoleSetupView } from './components/RoleSetupView';
+import { RoleSetupView, type RoleSetupPayload } from './components/RoleSetupView';
 import { StudentDashboard } from './components/StudentDashboard';
 import { TeacherDashboard } from './components/TeacherDashboard';
 import {
@@ -43,7 +43,6 @@ import {
 import type {
   StudentProgress,
   UserAccount,
-  UserRole,
   VariantProblemSet,
 } from './types/curriculum';
 
@@ -141,19 +140,18 @@ export default function App() {
     setUser(account);
   };
 
-  const handleCompleteRoleSetup = async (
-    role: UserRole,
-    displayName: string,
-    classLabel: string
-  ) => {
+  const handleCompleteRoleSetup = async (payload: RoleSetupPayload) => {
     if (!pendingIdentity) return;
     const newAccount: UserAccount = {
       id: pendingIdentity.uid,
-      name: displayName,
+      name: payload.displayName,
       email: pendingIdentity.email,
-      role,
-      classLabel,
-      initials: displayName.slice(0, 1).toUpperCase(),
+      role: payload.role,
+      classLabel: payload.classLabel,
+      ...(payload.grade ? { grade: payload.grade } : {}),
+      ...(payload.classNumber ? { classNumber: payload.classNumber } : {}),
+      ...(payload.studentNumber ? { studentNumber: payload.studentNumber } : {}),
+      initials: payload.displayName.slice(0, 1).toUpperCase(),
     };
     await ensureUserInFirestore(newAccount);
     setPendingIdentity(null);

@@ -60,6 +60,9 @@ export interface UserAccount {
   email: string;
   role: UserRole;
   classLabel: string;
+  grade?: string;
+  classNumber?: number;
+  studentNumber?: number;
   initials: string;
 }
 

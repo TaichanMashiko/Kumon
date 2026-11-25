@@ -1,3 +1,5 @@
+import { generateExamProblem } from './examEngine';
+
 export type StageGroup =
   | '小学校1年'
   | '小学校2年'
@@ -163,6 +165,9 @@ function generateSingleProblem(
   params: Record<string, number | string | boolean | number[]> = {},
   index: number
 ): GeneratedProblem {
+  const examProb = generateExamProblem(rng, template, params);
+  if (examProb) return examProb;
+
   const p = (k: string, fallback: number): number =>
     typeof params[k] === 'number' ? (params[k] as number) : fallback;
 

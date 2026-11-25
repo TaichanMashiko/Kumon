@@ -141,7 +141,15 @@ export function subscribeTeacherDashboardData(
   const unsubUsers = onSnapshot(studentsQuery, (snap) => {
     latestStudents = snap.docs
       .map((d) => d.data() as UserAccount)
-      .sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+      .sort((a, b) => {
+        const gCmp = (a.grade || '').localeCompare(b.grade || '', 'ja');
+        if (gCmp !== 0) return gCmp;
+        const cCmp = (a.classNumber ?? 99) - (b.classNumber ?? 99);
+        if (cCmp !== 0) return cCmp;
+        const nCmp = (a.studentNumber ?? 999) - (b.studentNumber ?? 999);
+        if (nCmp !== 0) return nCmp;
+        return a.name.localeCompare(b.name, 'ja');
+      });
     emit();
   });
 
