@@ -223,9 +223,6 @@ export function StudentAvatarCard({ studentName, progress }: StudentAvatarCardPr
             <span>
               解いた問題 <strong className="text-slate-900">{solvedCount}</strong> 問
             </span>
-            <span className="text-teal-800/80">
-              ※ 間違えても答案を提出すると +40 XP で成長します
-            </span>
           </div>
         </div>
       </div>
