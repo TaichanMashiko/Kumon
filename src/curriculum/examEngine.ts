@@ -668,10 +668,101 @@ export function generateExamProblem(
     case 'hs3_int_volume': {
       const a = randInt(rng, 1, 3);
       const b = randInt(rng, 1, 3);
-      // y = a*sqrt(x) on [0, b] rotated around x-axis -> V = pi * int_0^b a^2 x dx = pi * a^2 * b^2 / 2
       return {
         prompt: `曲線 $y = ${a === 1 ? '' : a}\\sqrt{x}$ と $x$ 軸および直線 $x = ${b}$ で囲まれた図形を $x$ 軸のまわりに1回転してできる立体の体積 $V$ を求めよ。`,
         answer: `$\\displaystyle V = \\pi \\int_0^{${b}} ${a * a}x \\, dx = ${fmtFrac(a * a * b * b, 2)}\\pi$`,
+      };
+    }
+
+    // ===== 大学入試（茨城大・筑波大 二次試験レベル M〜O教材相当） =====
+    case 'univ_qf_moving_axis': {
+      const r = randInt(rng, 2, 4);
+      const c = randInt(rng, 1, 5);
+      return {
+        prompt: `実数 $a$ に対し、関数 $f(x) = x^2 - 2ax + ${c} \\ (0 \\le x \\le ${r})$ の最小値 $m(a)$ を $a$ の値で場合分けして求めよ。`,
+        answer: `$a < 0$ のとき $m(a) = ${c}$、$0 \\le a \\le ${r}$ のとき $m(a) = -a^2 + ${c}$、$a > ${r}$ のとき $m(a) = ${r * r + c} - ${2 * r}a$`,
+      };
+    }
+
+    case 'univ_const_sep': {
+      const a = randInt(rng, 1, 3);
+      const peak = 2 * a * a * a;
+      return {
+        prompt: `3次方程式 $x^3 - ${3 * a * a}x - k = 0$ が異なる3つの実数解をもつとき、定数 $k$ の値の範囲を求めよ。`,
+        answer: `$k = x^3 - ${3 * a * a}x$ と定数分離し、極大値 $${peak}$・極小値 $-${peak}$ より **$-${peak} < k < ${peak}$**`,
+      };
+    }
+
+    case 'univ_int_equation': {
+      const mode = (params.mode as string) || 'const';
+      if (mode === 'var') {
+        const a = randInt(rng, 2, 5);
+        const b = randNonZero(rng, -4, 4);
+        return {
+          prompt: `等式 $\\displaystyle \\int_1^x f(t) \\, dt = x^3 ${fmtSigned(a)}x^2 ${fmtSigned(b)}x + c$ を満たす関数 $f(x)$ と定数 $c$ を求めよ。`,
+          answer: `両辺を $x$ で微分して $f(x) = 3x^2 ${fmtSigned(2 * a)}x ${fmtSigned(b)}$、$x=1$ 代入より $c = ${-(1 + a + b)}$`,
+        };
+      }
+      const k = randInt(rng, 2, 5);
+      // f(x) = kx + int_0^1 f(t) dt -> a = k/2 + a? Wait: let's use f(x) = kx + 2*int_0^1 f(t) dt -> a = k/2 + 2a -> a = -k/2
+      return {
+        prompt: `等式 $\\displaystyle f(x) = ${k * 2}x + 2\\int_0^1 f(t) \\, dt$ を満たす関数 $f(x)$ を求めよ。`,
+        answer: `$a = \\int_0^1 f(t)\\,dt$ とおくと $a = ${k} + 2a \\implies a = -${k}$、よって $f(x) = ${k * 2}x - ${k * 2}$`,
+      };
+    }
+
+    case 'univ_seq_sn_an': {
+      const a = randInt(rng, 1, 4);
+      const b = randInt(rng, 1, 5);
+      // S_n = a n^2 + b n -> a_1 = a+b, for n>=2: a_n = 2an + (b - a)
+      const c = b - a;
+      return {
+        prompt: `初項から第 $n$ 項までの和 $S_n$ が $S_n = ${a}n^2 + ${b}n$ で表される数列 $\\{a_n\\}$ の一般項 $a_n$ を求めよ。`,
+        answer: `$n \\ge 2$ で $a_n = S_n - S_{n-1} = ${2 * a}n ${c === 0 ? '' : fmtSigned(c)}$（$n=1$ でも成立）`,
+      };
+    }
+
+    case 'univ_space_vec': {
+      const a = randInt(rng, 1, 3);
+      const b = randInt(rng, 1, 3);
+      const c = randInt(rng, 1, 3);
+      const norm2 = a * a + b * b + c * c;
+      return {
+        prompt: `空間の2点 $\\mathrm{A}(${a}, ${b}, ${c}), \\ \\mathrm{B}(${a * 2}, 0, ${c})$ に対し、内積 $\\overrightarrow{\\mathrm{OA}} \\cdot \\overrightarrow{\\mathrm{OB}}$ と $|\\overrightarrow{\\mathrm{OA}}|^2$ を求めよ。`,
+        answer: `$\\overrightarrow{\\mathrm{OA}} \\cdot \\overrightarrow{\\mathrm{OB}} = ${2 * a * a + c * c}, \\ |\\overrightarrow{\\mathrm{OA}}|^2 = ${norm2}$`,
+      };
+    }
+
+    case 'univ_complex_rot': {
+      const a = randInt(rng, 1, 4);
+      const b = randInt(rng, 1, 4);
+      return {
+        prompt: `複素数平面上で、点 $z = ${a} + ${b}i$ を原点のまわりに $\\frac{\\pi}{2}$ だけ回転した点 $w$ を求めよ。`,
+        answer: `$w = i(${a} + ${b}i) = -${b} + ${a}i$`,
+      };
+    }
+
+    case 'univ_riemann_sum': {
+      const p = pick(rng, [1, 2, 3]);
+      return {
+        prompt: `区分求積法を用いて $\\displaystyle \\lim_{n \\to \\infty} \\frac{1}{n} \\sum_{k=1}^{n} \\left(\\frac{k}{n}\\right)^{${p}}$ の極限値を求めよ。`,
+        answer: `$\\displaystyle \\int_0^1 x^{${p}} \\, dx = \\frac{1}{${p + 1}}$`,
+      };
+    }
+
+    case 'univ_trig_sub_int': {
+      const a = randInt(rng, 1, 4);
+      return {
+        prompt: `$x = ${a}\\sin\\theta$ と置換して、定積分 $\\displaystyle \\int_0^{${a}} \\sqrt{${a * a} - x^2} \\, dx$ を求めよ。`,
+        answer: `$\\displaystyle ${a * a}\\int_0^{\\frac{\\pi}{2}} \\cos^2\\theta \\, d\\theta = ${fmtFrac(a * a, 4)}\\pi$`,
+      };
+    }
+
+    case 'univ_prob_recurrence': {
+      const n = randInt(rng, 2, 4);
+      return {
+        prompt: `1個のさいころを $n$ 回投げて出た目の和が偶数になる確率を $p_n$ とする。$p_1$ と $p_{n+1}$ を $p_n$ で表す漸化式を求め、$p_{${n}}$ を求めよ。`,
+        answer: `$p_1 = \\frac{1}{2}, \\ p_{n+1} = \\frac{1}{2}p_n + \\frac{1}{2}(1-p_n) = \\frac{1}{2}$ より $p_{${n}} = \\frac{1}{2}$`,
       };
     }
 

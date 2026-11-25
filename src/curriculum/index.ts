@@ -2,6 +2,7 @@ import { buildElementaryCatalog } from './elementaryCatalog';
 import { buildHighSchoolCatalog } from './highSchoolCatalog';
 import { buildJuniorHighCatalog } from './juniorHighCatalog';
 import type { MicroStepSpec, StageGroup } from './mathEngine';
+import { buildUniversityExamCatalog } from './universityExamCatalog';
 
 export const STAGE_GROUPS: StageGroup[] = [
   '小学校1年',
@@ -19,12 +20,14 @@ export const STAGE_GROUPS: StageGroup[] = [
   '高校 数学B',
   '高校 数学C',
   '高校 数学Ⅲ',
+  '大学入試（茨城大・筑波大）',
 ];
 
 export const ALL_MICRO_STEPS: MicroStepSpec[] = [
   ...buildElementaryCatalog(),
   ...buildJuniorHighCatalog(),
   ...buildHighSchoolCatalog(),
+  ...buildUniversityExamCatalog(),
 ];
 
 export const MICRO_STEPS_BY_ID: Record<string, MicroStepSpec> = Object.fromEntries(

@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, Download } from 'lucide-react';
+import { Check, CornerUpLeft, Download } from 'lucide-react';
 import {
   ALL_MICRO_STEPS,
+  getRemediationSteps,
   getStepSummary,
   MICRO_STEPS_BY_STAGE,
   STAGE_GROUPS,
+  STAGE_TO_KUMON_RANK,
   type StageGroup,
 } from '../lib/contentLoader';
 import { buildFeedbackExportLog, type ProgressMap } from '../lib/store';
@@ -75,6 +77,11 @@ export function TeacherDashboard({
   const stageSteps = useMemo(
     () => MICRO_STEPS_BY_STAGE[selectedStage] ?? [],
     [selectedStage]
+  );
+
+  const remediationSteps = useMemo(
+    () => (currentSummary ? getRemediationSteps(currentSummary.id) : []),
+    [currentSummary]
   );
 
   const showToast = (msg: string) => {
@@ -407,7 +414,7 @@ export function TeacherDashboard({
                       </span>
                       <button
                         type="submit"
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-blue-700 px-5 py-2.5 text-xs font-semibold text-white transition hover:bg-blue-800"
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-teal-700 px-5 py-2.5 text-xs font-semibold text-white transition hover:bg-teal-800"
                       >
                         <Check className="h-3.5 w-3.5" />
                         <span>
@@ -416,6 +423,48 @@ export function TeacherDashboard({
                       </button>
                     </div>
                   </form>
+
+                  {/* Diagnostic Remediation Links (戻り学習ワンクリック誘導) */}
+                  {remediationSteps.length > 0 && (
+                    <section className="space-y-2.5 border-t border-neutral-100 pt-6">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-bold text-neutral-700">
+                          つまずき時の戻り学習リンク（前提単元へワンクリック移動）
+                        </h3>
+                        <span className="text-[11px] text-neutral-400">
+                          {STAGE_TO_KUMON_RANK[currentSummary.stage]}
+                        </span>
+                      </div>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {remediationSteps.map((rem) => (
+                          <button
+                            key={rem.id}
+                            type="button"
+                            onClick={() => {
+                              onAssignStep(selectedStudent.id, rem.id);
+                              showToast(
+                                `${selectedStudent.name} を戻り学習（${rem.stage}・${rem.title}）に設定しました`
+                              );
+                            }}
+                            className="flex items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50/60 px-3.5 py-2.5 text-left text-xs transition hover:border-amber-400 hover:bg-amber-50"
+                          >
+                            <div className="min-w-0">
+                              <div className="text-[11px] font-bold text-amber-800">
+                                {rem.stage}（Lv.{rem.index + 1}）
+                              </div>
+                              <div className="truncate font-semibold text-neutral-800">
+                                {rem.title}
+                              </div>
+                            </div>
+                            <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-white px-2 py-1 text-[11px] font-bold text-amber-900 shadow-2xs">
+                              <CornerUpLeft className="h-3 w-3" />
+                              戻す
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  )}
                 </div>
               )}
 

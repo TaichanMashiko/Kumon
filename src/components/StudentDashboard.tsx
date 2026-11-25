@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import {
   ALL_MICRO_STEPS,
+  getRemediationSteps,
   getStepDocument,
   getWorksheetData,
   resolveStepId,
@@ -97,6 +98,11 @@ export function StudentDashboard({
     setConfirmOpen(false);
     setShowNoteForm(false);
   }, [activeStepId, activeVariantNum, questionCount]);
+
+  const remediationSteps = useMemo(
+    () => getRemediationSteps(activeStepId),
+    [activeStepId]
+  );
 
   const currentRating = progress.clarityRatings[activeStepId]?.score;
   const currentAccuracy = Math.round((correctCount / questionCount) * 100);
@@ -216,6 +222,14 @@ export function StudentDashboard({
             {showExplanation && (
               <div className="mt-3 rounded-xl border border-teal-100 bg-teal-50/40 px-5 py-4 text-sm leading-relaxed text-slate-800">
                 <MarkdownMath content={worksheet.explanation} />
+                {remediationSteps.length > 0 && (
+                  <div className="mt-3 border-t border-teal-200/60 pt-2.5 text-xs text-teal-900/80">
+                    <span className="font-bold">つまずいたときの関連基礎：</span>
+                    {remediationSteps
+                      .map((r) => `${r.stage}「${r.title}」`)
+                      .join(' ／ ')}
+                  </div>
+                )}
               </div>
             )}
           </div>

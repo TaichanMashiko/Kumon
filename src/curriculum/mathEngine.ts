@@ -15,7 +15,8 @@ export type StageGroup =
   | '高校 数学Ⅱ'
   | '高校 数学B'
   | '高校 数学C'
-  | '高校 数学Ⅲ';
+  | '高校 数学Ⅲ'
+  | '大学入試（茨城大・筑波大）';
 
 export interface MicroStepSpec {
   id: string;
@@ -25,6 +26,8 @@ export interface MicroStepSpec {
   questionCount: number;
   explanation: string;
   template: string;
+  kumonRank?: string;
+  remediationIds?: string[];
   params?: Record<string, number | string | boolean | number[]>;
 }
 

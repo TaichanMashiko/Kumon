@@ -10,9 +10,19 @@ import {
   type GeneratedWorksheet,
   type StageGroup,
 } from '../curriculum/mathEngine';
+import {
+  resolveRemediationIds,
+  STAGE_TO_KUMON_RANK,
+} from '../curriculum/remediationMap';
 import type { StepDocument } from '../types/curriculum';
 
-export { ALL_MICRO_STEPS, MICRO_STEPS_BY_ID, MICRO_STEPS_BY_STAGE, STAGE_GROUPS };
+export {
+  ALL_MICRO_STEPS,
+  MICRO_STEPS_BY_ID,
+  MICRO_STEPS_BY_STAGE,
+  STAGE_GROUPS,
+  STAGE_TO_KUMON_RANK,
+};
 export type { GeneratedWorksheet, StageGroup };
 
 const LEGACY_STEP_REDIRECT: Record<string, string> = {
@@ -105,4 +115,29 @@ export function getStepSummary(stepId: string): {
     questionCount: spec.questionCount,
     index: idx >= 0 ? idx : 0,
   };
+}
+
+export function getRemediationSteps(stepId: string): Array<{
+  id: string;
+  stage: StageGroup;
+  category: string;
+  title: string;
+  index: number;
+}> {
+  const resolvedId = resolveStepId(stepId);
+  const spec = MICRO_STEPS_BY_ID[resolvedId];
+  if (!spec) return [];
+  const targetIds = resolveRemediationIds(spec.id, spec.remediationIds);
+  return targetIds
+    .filter((id) => Boolean(MICRO_STEPS_BY_ID[id]))
+    .map((id) => {
+      const s = getStepSummary(id);
+      return {
+        id: s.id,
+        stage: s.stage,
+        category: s.category,
+        title: s.title,
+        index: s.index,
+      };
+    });
 }
